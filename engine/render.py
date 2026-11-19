@@ -25,25 +25,12 @@ MIN_W x MIN_H) crops the stage's edges and the top of its sky instead.
 Scenes draw full-width things over cv.xs() (the visible world columns)
 instead of range(CW).
 
-Three sizes (cv.k)
-------------------
-A big window does not just show more scenery: when the whole stage fits
-1.5x or 2x bigger (see pick_scale), it is DRAWN bigger, with its own
-larger art (bigger tree, bigger cats ...), the font staying the same.
-
-Everything still *moves* in stage units (a cat at x = 30.5 on row 25.8);
-only drawing changes. A canvas has a scale k (1, 1.5 or 2), and its
-coordinates are "pixels" of the k-times bigger stage (sw x sh cells):
-    cv.px(x) / cv.py(y)   a stage position -> its cell on this canvas
-A scene says how big it can be drawn with MAX_SCALE (see engine/scene.py).
 """
-import math
 import unicodedata
 import zlib
 
 CW, CH = 78, 27            # the stage every scene is laid out on (columns x rows)
 MIN_W, MIN_H = 64, 24      # the smallest window a scene still runs in (cropped)
-SCALES = (1, 1.5, 2)       # how much bigger a scene may be drawn (see pick_scale)
 RESET = "\x1b[0m"
 
 
@@ -97,14 +84,11 @@ def fit(s, width):
 #  Canvas
 # ---------------------------------------------------------------------
 class Canvas:
-    """w x h cells. World (x, y) is drawn at cell (x + ox, y + oy).
-    k = how many times bigger the stage is drawn; it is then sw x sh cells."""
+    """w x h cells. World (x, y) is drawn at cell (x + ox, y + oy)."""
 
-    def __init__(self, w=CW, h=CH, ox=0, oy=0, k=1):
+    def __init__(self, w=CW, h=CH, ox=0, oy=0):
         self.w, self.h = w, h
         self.ox, self.oy = ox, oy
-        self.k = k
-        self.sw, self.sh = stage_size(k)
         # the visible part of the world
         self.x0, self.x1 = -ox, w - ox
         self.y0, self.y1 = -oy, h - oy
@@ -119,13 +103,6 @@ class Canvas:
     def view(self):
         return (self.x0, self.y0, self.x1, self.y1)
 
-    def px(self, x):
-        """Stage column x (a float is fine) -> the cell column on this canvas."""
-        return scaled(x, self.k)
-
-    def py(self, y):
-        """Stage row y -> the cell row on this canvas."""
-        return scaled(y, self.k)
 
     def clear(self):
         self.ch = [" "] * (self.w * self.h)
@@ -192,39 +169,13 @@ class Canvas:
                 for y in range(self.h)]
 
 
-def scaled(v, k):
-    """A stage position (column or row) -> its cell when drawn k times bigger
-    (the middle of stage cell v lands in the middle of its k x k block)."""
-    if k == 1:
-        return int(round(v))
-    return int(math.floor((v + 0.5) * k))
-
-
-def stage_size(k, w=CW, h=CH):
-    """The stage drawn k times bigger: (columns, rows)."""
-    return int(math.ceil(w * k)), int(math.ceil(h * k))
-
-
-def pick_scale(cols, lines, max_scale=1):
-    """The biggest scale (<= max_scale) at which the stage fits a cols x lines
-    window. A few rows of sky may be cut, as at the normal size."""
-    best = 1
-    for k in SCALES:
-        sw, sh = stage_size(k)
-        if k <= max_scale and cols >= sw and lines >= sh - round(3 * k):
-            best = k
-    return best
-
-
-def view_canvas(cols, lines, w=CW, h=CH, min_w=MIN_W, min_h=MIN_H, k=1):
-    """A canvas filling a cols x lines window: the w x h stage (drawn k times
-    bigger) centred left/right and standing on the bottom edge. None if the
-    window is smaller than min_w x min_h."""
+def view_canvas(cols, lines, w=CW, h=CH, min_w=MIN_W, min_h=MIN_H):
+    """A canvas filling a cols x lines window: the w x h stage centred
+    left/right and standing on the bottom edge. None if the window is
+    smaller than min_w x min_h."""
     if cols < min_w or lines < min_h:
         return None
-    sw, sh = stage_size(k, w, h)
-    return Canvas(cols, lines, (cols - sw) // 2, lines - sh, k)
-
+    return Canvas(cols, lines, (cols - w) // 2, lines - h)
 
 # ---------------------------------------------------------------------
 #  Margin helpers (scenery outside the 78 x 27 stage)

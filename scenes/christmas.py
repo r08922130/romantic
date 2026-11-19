@@ -17,7 +17,7 @@ import random
 
 from engine.cats import Accessory
 from engine.effects import SPARK_RAMP, Starfield
-from engine.render import CH, CW, S, clamp, lay_out, stage_size
+from engine.render import CH, CW, S, clamp, lay_out
 from engine.scene import BaseScene
 from engine.sprites import Art
 
@@ -36,47 +36,41 @@ INTRO_END = 26.0
 #  Snow + snowy ground
 # ---------------------------------------------------------------------
 class Snow:
-    """Flakes in canvas cells; w x h = the stage at this size (k = how much
-    bigger it is drawn: more flakes, falling faster in cells)."""
-
-    def __init__(self, rng, n=90, w=CW, h=CH, k=1):
+    def __init__(self, rng, n=90):
         self.f = []
         self.n = 0
-        self.w, self.h, self.k = w, h, k
         for _ in range(n):
             big = rng.random() < 0.28
-            self.f.append([rng.uniform(0, w), rng.uniform(0, h),
-                           (rng.uniform(2.4, 3.6) if big else rng.uniform(1.0, 2.0)) * k,
+            self.f.append([rng.uniform(0, CW), rng.uniform(0, CH),
+                           rng.uniform(2.4, 3.6) if big else rng.uniform(1.0, 2.0),
                            rng.uniform(0, 6.28),
                            "*" if big else rng.choice(".'`,"),
                            255 if big else rng.choice((250, 246, 252))])
         self.base = n
-        self.view = (0, 0, w, h)
+        self.view = (0, 0, CW, CH)
 
     def set_view(self, view):
         """A bigger window gets more flakes (same density), falling over all of it."""
         self.view = view
         x0, y0, x1, _y1 = view
-        w, h, k = self.w, self.h, self.k
-        want = int(self.base * (x1 - x0) * (h - y0) / float(w * h))
+        want = int(self.base * (x1 - x0) * (CH - y0) / float(CW * CH))
         rng = random.Random(len(self.f))
         while len(self.f) < want:
             big = rng.random() < 0.28
-            self.f.append([rng.uniform(x0, x1), rng.uniform(y0, h),
-                           (rng.uniform(2.4, 3.6) if big else rng.uniform(1.0, 2.0)) * k,
+            self.f.append([rng.uniform(x0, x1), rng.uniform(y0, CH),
+                           rng.uniform(2.4, 3.6) if big else rng.uniform(1.0, 2.0),
                            rng.uniform(0, 6.28),
                            "*" if big else rng.choice(".'`,"),
                            255 if big else rng.choice((250, 246, 252))])
 
     def update(self, dt, t, intensity):
         n = int(len(self.f) * intensity)
-        wind = 1.3 * math.sin(t * 0.15) * self.k
-        sway = 1.2 * self.k
+        wind = 1.3 * math.sin(t * 0.15)
         x0, y0, x1, _y1 = self.view
         for f in self.f[:n]:
             f[1] += f[2] * dt
-            f[0] += (math.sin(t * 0.8 + f[3]) * sway + wind) * dt
-            if f[1] >= self.h:
+            f[0] += (math.sin(t * 0.8 + f[3]) * 1.2 + wind) * dt
+            if f[1] >= CH:
                 f[1] = y0 - 1.0
                 f[0] = random.uniform(x0, x1)
             if f[0] < x0:
@@ -90,9 +84,9 @@ class Snow:
             cv.put(int(f[0]), int(f[1]), f[4], S(f[5]))
 
 
-def snowy_floor(rng, columns=None, rows=range(24, CH)):
+def snowy_floor(rng, columns=None):
     cells = []
-    for y in rows:
+    for y in range(24, CH):
         for x in (range(CW) if columns is None else columns):
             v = rng.random()
             if v < 0.10:
@@ -109,20 +103,10 @@ PINE_L = Art(["  *  ", " /^\\ ", " /*\\ ", "/^^*\\", "/*^^\\", "  |  "],
              charmap=_PINE_COLOURS)
 
 
-def pine(rows):
-    """A snowy pine `rows` tall (for the margins of a wide window, drawn big)."""
-    out = [" " * (rows - 1) + "*"]
-    for r in range(1, rows - 1):
-        fill = "".join("*" if (r * 7 + i * 3) % 5 == 0 else "^" for i in range(2 * r - 1))
-        out.append(" " * (rows - 1 - r) + "/" + fill + "\\")
-    out.append(" " * (rows - 2) + "|||" if rows > 6 else " " * (rows - 1) + "|")
-    return Art(out, charmap=_PINE_COLOURS)
-
-
-def draw_ground(cv, rng_cells, row=23):
+def draw_ground(cv, rng_cells):
     pat = "-~~-._.~-~'"
     for x in cv.xs():
-        cv.put(x, row, pat[x % len(pat)], S(252))
+        cv.put(x, 23, pat[x % len(pat)], S(252))
     for (x, y, c, col) in rng_cells:
         cv.put(x, y, c, S(col))
 
@@ -136,22 +120,13 @@ class Tree:
     FOLIAGE = [(235, 235, 236), (22, 22, 28), (22, 28, 34), (28, 34, 40)]
     LCOL = (196, 226, 46, 51, 201, 214)
     OCOL = (196, 33, 214, 201, 45, 135, 226, 160, 69, 213, 250)
-    # the same tree drawn bigger: (tiers, top row, trunk rows, trunk half-width)
-    BIG = {1.5: ([(4, 1), (6, 4), (6, 7), (8, 10)], 7, 3, 3),
-           2: ([(6, 2), (8, 6), (8, 10), (10, 14)], 10, 4, 4)}
 
-    def __init__(self, rng, k=1):
-        self.k = k
-        self.cx = CX
-        tiers, self.top, self.trunk_rows, self.trunk_half = self.TIERS, self.TOP, 2, 2
-        if k != 1:
-            tiers, self.top, self.trunk_rows, self.trunk_half = self.BIG[k]
-            self.cx = int(CX * k)
+    def __init__(self, rng):
         self.rows = []       # (y, half, [(dx, ch, shade)])
         self.tier_rows = []
-        y = self.top
-        nt = len(tiers)
-        for ti, (n, h0) in enumerate(tiers):
+        y = self.TOP
+        nt = len(self.TIERS)
+        for ti, (n, h0) in enumerate(self.TIERS):
             first = y
             for r in range(n):
                 h = h0 + 2 * r
@@ -187,9 +162,9 @@ class Tree:
                 h = half_at[yb]
                 left, right = -(h - 1) + 1, (h - 1) - 1
                 m = max(1, (right - left) // 3)
-                for j in range(m + 1):
-                    dx = int(round(left + j * (right - left) / float(m)))
-                    yy = yb - (1 if (0 < j < m and h >= 5) else 0)
+                for k in range(m + 1):
+                    dx = int(round(left + k * (right - left) / float(m)))
+                    yy = yb - (1 if (0 < k < m and h >= 5) else 0)
                     if abs(dx) <= half_at[yy] - 1:
                         lights.append((yy, dx))
         lights.sort()
@@ -208,28 +183,26 @@ class Tree:
         for (yy, dx) in cand:
             ok = True
             for (cy, cx_) in chosen:
-                if (dx - cx_) ** 2 + (2 * (yy - cy)) ** 2 < 28 * k * k:
+                if (dx - cx_) ** 2 + (2 * (yy - cy)) ** 2 < 28:
                     ok = False
                     break
             if ok:
                 chosen.append((yy, dx))
-            if len(chosen) >= 26 * k:
+            if len(chosen) >= 26:
                 break
         chosen.sort()
-        self.balls = [(yy, dx, "O" if yy > self.top + 6 * k else "o",
+        self.balls = [(yy, dx, "O" if yy > self.TOP + 6 else "o",
                        self.OCOL[i % len(self.OCOL)], rng.uniform(0, 6.28))
                       for i, (yy, dx) in enumerate(chosen)]
 
     def draw(self, cv, t, reveal, lit):
         n = len(self.rows)
-        CX = self.cx
         # trunk
         if reveal > 0.05:
-            th = self.trunk_half
-            for yy in range(self.base, self.base + self.trunk_rows):
-                cv.put(CX - th, yy, "|", S(94))
-                cv.put(CX + th, yy, "|", S(94))
-                for dx in range(-th + 1, th):
+            for yy in (self.base, self.base + 1):
+                cv.put(CX - 2, yy, "|", S(94))
+                cv.put(CX + 2, yy, "|", S(94))
+                for dx in (-1, 0, 1):
                     cv.put(CX + dx, yy, "#", S(130))
         full = {}
         for i, (yy, h, cells) in enumerate(self.rows):
@@ -262,7 +235,7 @@ class Tree:
                 cv.put(CX + dx, yy, ".", S(240))
         # baubles
         for (yy, dx, ch, col, ph) in self.balls:
-            if full.get(yy, 0) < 0.99 or (yy - self.top) / float(n) > lit + 0.15:
+            if full.get(yy, 0) < 0.99 or (yy - self.TOP) / float(n) > lit + 0.15:
                 continue
             if math.sin(t * 1.9 + ph) > 0.985:
                 cv.put(CX + dx, yy, "*", S(231, 1))
@@ -275,48 +248,16 @@ class Tree:
         if lit < 1.0 and int(t * 14) % 2 == 1:
             return
         ray = 226 if int(t * 3) % 2 == 0 else 231
-        CX, k = self.cx, self.k
-        core = "*" if int(t * 2) % 2 == 0 else "@"
-        if k != 1:
-            # bigger star: longer rays, the centre still blinks * / @
-            art = BIG_STAR[k]
-            y = self.top - len(art)
-            for dy, row in enumerate(art):
-                x0 = CX - len(row) // 2
-                for dx, c in enumerate(row):
-                    if c == "O":
-                        cv.put(x0 + dx, y + dy, core, S(231, 1))
-                    elif c in "-=":
-                        cv.put(x0 + dx, y + dy, c, S(220, 1))
-                    elif c != " ":
-                        cv.put(x0 + dx, y + dy, c, S(ray, 1))
-            mid = y + len(art) // 2
-        else:
-            y = self.TOP - 3
-            cv.text(CX - 1, y, "\\|/", S(ray, 1))
-            cv.text(CX - 2, y + 1, "--", S(220, 1))
-            cv.put(CX, y + 1, core, S(231, 1))
-            cv.text(CX + 1, y + 1, "--", S(220, 1))
-            cv.text(CX - 1, y + 2, "/|\\", S(ray, 1))
-            mid = y + 1
+        y = self.TOP - 3
+        cv.text(CX - 1, y, "\\|/", S(ray, 1))
+        cv.text(CX - 2, y + 1, "--", S(220, 1))
+        cv.put(CX, y + 1, "*" if int(t * 2) % 2 == 0 else "@", S(231, 1))
+        cv.text(CX + 1, y + 1, "--", S(220, 1))
+        cv.text(CX - 1, y + 2, "/|\\", S(ray, 1))
         sp = (t * 1.7) % 4.0
         for i, (dx, dy) in enumerate(((-5, 0), (5, 1), (-4, 2), (4, -1))):
             if int(sp) == i:
-                cv.put(CX + int(dx * k * 1.4 if k != 1 else dx), mid + int(dy * k), "+",
-                       S(229, 1))
-
-
-# the star drawn bigger ("O" = the blinking centre)
-BIG_STAR = {
-    1.5: ["  \\ | /  ",
-          "---=O=---",
-          "  / | \\  "],
-    2: ["  \\  |  /  ",
-        "   \\ | /   ",
-        "----=(O)=----",
-        "   / | \\   ",
-        "  /  |  \\  "],
-}
+                cv.put(CX + dx, y + 1 + dy, "+", S(229, 1))
 
 
 # ---------------------------------------------------------------------
@@ -350,9 +291,6 @@ class Gift:
                         self.base - self.h + random.uniform(-1, 1),
                         random.uniform(-3, 3), random.uniform(-3, -0.5), 0.9,
                         random.choice("*+"), SPARK_RAMP)
-        k = cv.k
-        if k != 1:
-            return self.draw_big(cv, k, dy)
         w, h = self.w, self.h
         x0 = self.x
         top = self.base - h + 1 + dy
@@ -385,44 +323,6 @@ class Gift:
         cv.put(x0 + w - 1, r, "'", box, True)
         cv.put(mid, r, "#", rib)
 
-    def draw_big(self, cv, k, dy):
-        """The same present drawn k times bigger: a bigger bow, ribbon both ways."""
-        w = int(round(self.w * k)) | 1                 # odd: the ribbon in the middle
-        h = int(round(self.h * k))
-        x0 = int(self.x * k)
-        bottom = int((self.base + 1) * k) - 1
-        top = bottom - h + 1 + int(dy * k)
-        mid = x0 + w // 2
-        box, rib = S(self.box), S(self.rib, 1)
-        cv.text(mid - 2, top, "(\\ /)", rib)          # the bow
-        cv.text(mid - 3, top + 1, "--(@)--" if w > 9 else "-(@)-", rib)
-        if w <= 9:
-            cv.text(mid - 2, top + 1, "-(@)-", rib)
-        r = top + 2
-        cv.put(x0, r, "[", box, True)
-        for i in range(1, w - 1):
-            cv.put(x0 + i, r, "=", box, True)
-        cv.put(x0 + w - 1, r, "]", box, True)
-        cv.put(mid, r, "#", rib)
-        hr = top + 2 + (h - 2) // 2
-        for r in range(top + 3, top + h - 1):
-            cv.put(x0, r, "|", box, True)
-            cv.put(x0 + w - 1, r, "|", box, True)
-            for i in range(1, w - 1):
-                if r == hr and h >= 7:
-                    cv.put(x0 + i, r, "=", rib, True)
-                elif (i + r) % 7 == 0:
-                    cv.put(x0 + i, r, ".", box, True)       # a little pattern
-                else:
-                    cv.put(x0 + i, r, " ", box, True)
-            cv.put(mid, r, "#", rib)
-        r = top + h - 1
-        cv.put(x0, r, "'", box, True)
-        for i in range(1, w - 1):
-            cv.put(x0 + i, r, "-", box, True)
-        cv.put(x0 + w - 1, r, "'", box, True)
-        cv.put(mid, r, "#", rib)
-
 
 # (x offset from tree centre, width, height, box colour, ribbon colour)
 GIFT_SPECS = [
@@ -442,13 +342,7 @@ GIFT_SPECS = [
 SANTA_HAT = Accessory("santa_hat", [
     (0, -1, "{R}/#\\.{H}@"),
     (0, 0, "{H}==="),
-], palette={"R": S(196, 1), "H": S(255, 1)}, scaled={
-    1.5: [(0, -1, "{R}  /###\\.{H}@"),
-          (0, 0, "{H}=======")],
-    2: [(0, -2, "{R}    /##\\."),
-        (0, -1, "{R}  /######\\{H}@"),
-        (0, 0, "{H}=========")],
-})
+], palette={"R": S(196, 1), "H": S(255, 1)})
 
 
 # =====================================================================
@@ -464,7 +358,6 @@ class ChristmasScene(BaseScene):
     INTRO_END = INTRO_END
     GAZE = (CX, 9, 8, 10)          # a calm cat gazing at the tree makes it sparkle
     CAT_ACCESSORY = SANTA_HAT
-    MAX_SCALE = 2                  # bigger tree / presents / cats in a big window
     SETTINGS = {
         "greeting": "Merry Christmas, My Love!",
         "wish": "Every day with you feels like Christmas.",
@@ -482,41 +375,16 @@ class ChristmasScene(BaseScene):
         self.floor = snowy_floor(rng)
         self.floor_extra = []
         self.pines = []
-        self.ground = 23           # the snowy ground line (a canvas row)
         self.star_fx = False
-
-    def on_scale(self, k):
-        """Drawn k times bigger: the same scene with bigger art (the
-        normal-size things built in build() are kept for k = 1)."""
-        if k == 1:
-            self.tree, self.snow, self.floor = self.small
-            self.ground = 23
-            return
-        if not hasattr(self, "small"):
-            self.small = (self.tree, self.snow, self.floor)
-        sw, sh = stage_size(k)
-        self.ground = int(23 * k)
-        self.tree = Tree(random.Random(41), k)
-        self.snow = Snow(random.Random(42), int(90 * k * 1.3), sw, sh, k)
-        self.floor = snowy_floor(random.Random(43), range(sw), range(self.ground + 1, sh))
 
     def on_view(self, view):
         self.snow.set_view(view)
-        k = self.k
-        rows = range(24, CH) if k == 1 else range(self.ground + 1, stage_size(k)[1])
-        self.floor_extra = snowy_floor(random.Random(3), self.margin_columns(), rows)
+        self.floor_extra = snowy_floor(random.Random(3), self.margin_columns())
         # little snowy pines out in the margins of a wide window
         x0, _y0, x1, _y1 = view
-        if k == 1:
-            make = lambda r: (5, r.randint(5, 14), r.choice((PINE_S, PINE_S, PINE_L)))
-            start = CW + 3
-        else:
-            arts = [pine(int(5 * k)), pine(int(7 * k)), pine(int(9 * k))]
-            make = lambda r: (arts[-1].w, r.randint(int(4 * k), int(12 * k)), r.choice(arts))
-            start = self.stage_w() + int(3 * k)
+        make = lambda r: (5, r.randint(5, 14), r.choice((PINE_S, PINE_S, PINE_L)))
         self.pines = (lay_out(random.Random(5), -3, x0, make, leftwards=True) +
-                      lay_out(random.Random(6), start, x1, make))
-
+                      lay_out(random.Random(6), CW + 3, x1, make))
     def update_scene(self, dt):
         self.snow.update(dt, self.t, min(1.0, 0.12 + self.t / 5.0))
 
@@ -524,10 +392,9 @@ class ChristmasScene(BaseScene):
         t = self.t
         self.sky.draw(cv, t)
         self.snow.draw(cv)
-        g = self.ground
-        for (x, w, art) in self.pines:
-            art.draw(cv, x + (w - art.w) // 2, g - art.h)
-        draw_ground(cv, self.floor + self.floor_extra, g)
+        for (x, _w, art) in self.pines:
+            art.draw(cv, x, 23 - art.h)
+        draw_ground(cv, self.floor + self.floor_extra)
         reveal = clamp((t - T_TREE) / T_TREE_LEN, 0.0, 1.0)
         lit = clamp((t - T_LIGHTS) / T_LIGHTS_LEN, 0.0, 1.0)
         self.tree.draw(cv, t, reveal, lit)

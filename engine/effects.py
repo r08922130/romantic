@@ -44,7 +44,7 @@ class Fx:
             ramp = q[7]
             col = ramp[min(len(ramp) - 1, int(r * len(ramp)))]
             x = q[0] + math.sin(t * 3.0 + q[9]) * q[8]
-            cv.put(cv.px(x), cv.py(q[1]), q[6], S(col, q[10]))
+            cv.put(int(round(x)), int(round(q[1])), q[6], S(col, q[10]))
 
 
 FIREWORK_RAMPS = [(231, 226, 220, 214, 208, 238), (231, 159, 51, 39, 27, 238),
@@ -79,10 +79,7 @@ class Fireworks:
 
     def draw(self, cv):
         for r in self.rockets:
-            if cv.k == 1:
-                cv.put(int(r[0]), int(r[1]), "|", S(223))
-            else:
-                cv.put(cv.px(int(r[0])), cv.py(int(r[1])), "|", S(223))
+            cv.put(int(r[0]), int(r[1]), "|", S(223))
 
 
 class Starfield:
@@ -111,25 +108,9 @@ class Starfield:
                 if hash01(x, y, 7) < self.density:
                     self.extra.append((x, y, hash01(x, y, 8) * 6.28))
 
-    def big_sky(self, cv):
-        """Drawn bigger (cv.k > 1): stars over the bigger sky, a little
-        sparser per cell (the same sky, seen bigger)."""
-        key = (cv.k, cv.x0, cv.y0, cv.x1)
-        if getattr(self, "big_for", None) != key:
-            self.big_for = key
-            top = int(self.height * cv.k)
-            self.big = [(x, y, hash01(x, y, 9) * 6.28)
-                        for y in range(cv.y0, top) for x in range(cv.x0, cv.x1)
-                        if hash01(x, y, 7) < self.density / cv.k]
-        return self.big
-
     def draw(self, cv, t):
-        if cv.k != 1:
-            stars = self.big_sky(cv)
-        else:
-            self.fill_margins(min(cv.x0, 0), min(cv.y0, 0), max(cv.x1, self.width))
-            stars = self.stars + self.extra
-        for x, y, ph in stars:
+        self.fill_margins(min(cv.x0, 0), min(cv.y0, 0), max(cv.x1, self.width))
+        for x, y, ph in self.stars + self.extra:
             v = math.sin(t * 1.3 + ph)
             if v > 0.88:
                 cv.put(x, y, "+", S(255, 1))
@@ -180,19 +161,18 @@ class Banner:
 
         # a cropped (small) window: keep the greeting on screen and inside it
         y = max(0, getattr(cv, "y0", 0))
-        width = self.width if getattr(cv, "k", 1) == 1 else cv.sw   # centred on the stage
-        avail = min(width, getattr(cv, "x1", width) - getattr(cv, "x0", 0))
+        avail = min(self.width, getattr(cv, "x1", self.width) - getattr(cv, "x0", 0))
         l1, l2 = self.l1, self.l2
-        if avail < width:
+        if avail < self.width:
             l1, l2 = fit(l1, avail - 2), fit(l2, avail - 2)
         w1, w2 = text_width(l1), text_width(l2)
-        end = cv.put_text((width - w1) // 2, y, l1[:n], c1)
+        end = cv.put_text((self.width - w1) // 2, y, l1[:n], c1)
         if n < len(l1) and int(t * 4) % 2 == 0:
             cv.put(end, y, "_", S(231, 1))
         m = n - len(l1) - 3
         if m > 0:
             wc = S(self.wish_colour)
-            end = cv.put_text((width - w2) // 2, y + 1, l2[:m],
+            end = cv.put_text((self.width - w2) // 2, y + 1, l2[:m],
                               lambda i, c: wc)
             if m < len(l2) and int(t * 4) % 2 == 0:
                 cv.put(end, y + 1, "_", wc)

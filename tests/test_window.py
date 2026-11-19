@@ -88,30 +88,16 @@ class WindowSizeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             terminal.snapshot(manager(), "christmas", 1.0, size=(40, 20))
 
-    def test_maximize_leaves_windows_terminal_alone(self):
-        old = dict(os.environ)
-        try:
-            os.environ["WT_SESSION"] = "x"
-            os.environ.pop("ROMANCE_CONHOST", None)
-            self.assertIsNone(terminal.maximize_window())  # cannot resize it
-        finally:
-            os.environ.clear()
-            os.environ.update(old)
-
-    def test_launchers_maximise_the_window(self):
+    def test_launchers(self):
         with open(os.path.join(ROOT, "run.bat"), "rb") as f:
             bat = f.read()
         bat.decode("ascii")                                    # cmd.exe needs ASCII
         self.assertEqual(bat.count(b"\n"), bat.count(b"\r\n"))  # and CRLF
-        self.assertIn(b"--maximize", bat)
-        self.assertIn(b"conhost.exe", bat)
+        self.assertIn(b"main.py --menu", bat)
         with open(os.path.join(ROOT, "run.command"), "rb") as f:
             cmd = f.read()
         self.assertNotIn(b"\r\n", cmd)
-        self.assertIn(b"zoomed", cmd)
-        self.assertNotIn(b"fontSize", cmd)                     # the font is left alone
-        self.assertIn(b"trap restore_window EXIT", cmd)
-
+        self.assertIn(b"main.py --menu", cmd)
     def test_lay_out(self):
         rng = random.Random(1)
         make = lambda r: (5, 1, None)        # noqa: E731

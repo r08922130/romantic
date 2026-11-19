@@ -65,9 +65,7 @@ def build_parser():
     ap.add_argument("--skip-intro", action="store_true", default=None, dest="skip_intro",
                     help="skip the opening sequence")
     ap.add_argument("--ascii", action="store_true", help="use <3 instead of the heart symbol")
-    ap.add_argument("--maximize", action="store_true",
-                    help="Windows console: maximise the window, so the scene is drawn "
-                         "at its biggest size (run.bat does this)")
+
     ap.add_argument("--fps", type=int)
     ap.add_argument("--cats", help="cat config file (default: cats.json)")
     ap.add_argument("--preview-skin", dest="preview_skin", metavar="NAME_OR_FILE",
@@ -130,9 +128,7 @@ def main(argv=None):
                 size = tuple(int(v) for v in args.size.lower().split("x"))
             print("\n".join(terminal.snapshot(manager, name, args.snapshot, args.seed, size)))
             return
-        if args.maximize:
-            # a full-screen window: the scene is drawn bigger; put back on exit
-            _restore.append(terminal.maximize_window())
+
         if args.menu:
             from engine.menu import Menu
             picked = terminal.run_menu(Menu(manager, cfg.cats, name, PROJECT_NAME, manager.only_cats))
@@ -149,17 +145,5 @@ def main(argv=None):
     terminal.run(manager, name, cfg.fps, title=PROJECT_NAME)
 
 
-_restore = []          # undo --maximize when the program ends
-
-
-def run_main(argv=None):
-    try:
-        main(argv)
-    finally:
-        for undo in _restore:
-            if undo is not None:
-                undo()
-
-
 if __name__ == "__main__":
-    run_main()
+    main()

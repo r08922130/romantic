@@ -19,7 +19,7 @@ import shutil
 import sys
 import time
 
-from .render import MIN_H, MIN_W, RESET, Canvas, pick_scale, view_canvas
+from .render import MIN_H, MIN_W, RESET, Canvas, view_canvas
 
 
 def enable_vt():
@@ -40,42 +40,6 @@ def enable_vt():
     except Exception:
         pass
 
-
-def maximize_window():
-    """Windows console (conhost) only: maximise the window, so the scene can
-    be drawn at its biggest size (see render.pick_scale; the font is left
-    alone). Returns a function that puts the window back (or None).
-
-    Windows Terminal does not let programs resize its window: run.bat opens
-    the classic console window for this. Mac: run.command zooms Terminal."""
-    if os.name != "nt" or (os.environ.get("WT_SESSION") and
-                           not os.environ.get("ROMANCE_CONHOST")):
-        return None
-    try:
-        import ctypes
-        from ctypes import wintypes
-        k = ctypes.windll.kernel32
-        user = ctypes.windll.user32
-        k.GetConsoleWindow.restype = wintypes.HWND
-        hwnd = k.GetConsoleWindow()
-        if not hwnd:
-            return None
-        cls = ctypes.create_unicode_buffer(64)
-        user.GetClassNameW(hwnd, cls, 64)
-        if cls.value == "PseudoConsoleWindow":   # inside Windows Terminal etc.
-            return None
-        if user.IsZoomed(hwnd):
-            return None
-        user.ShowWindow(hwnd, 3)                 # SW_MAXIMIZE
-
-        def restore():
-            try:
-                user.ShowWindow(hwnd, 9)         # SW_RESTORE
-            except Exception:
-                pass
-        return restore
-    except Exception:
-        return None
 
 class Keys:
     def __init__(self):
@@ -216,10 +180,8 @@ def run(manager, name, fps, title=None):
                 size = sz
                 out.write("\x1b[2J")
                 # the canvas fills the window (the stage centred, standing on
-                # the bottom edge), drawn 1 / 1.5 / 2 times bigger if it fits;
-                # None = smaller than MIN_W x MIN_H
-                k = pick_scale(sz.columns, sz.lines, scene.MAX_SCALE)
-                cv = view_canvas(sz.columns, sz.lines, scene.CW, scene.CH, k=k)
+                # the bottom edge); None = smaller than MIN_W x MIN_H
+                cv = view_canvas(sz.columns, sz.lines, scene.CW, scene.CH)
             if cv is None:
                 too_small(out, MIN_W, MIN_H, sz.columns, sz.lines)
                 time.sleep(0.25)
@@ -297,20 +259,17 @@ def simulate(scene, seconds, fps=30):
         scene.update(1.0 / fps)
 
 
-def snapshot(manager, name, seconds, seed=None, size=None, scale=None):
+def snapshot(manager, name, seconds, seed=None, size=None):
     """Render scene `name` after `seconds` as plain text lines.
-    size = (cols, lines) renders it as in a window of that size (drawn
-    bigger if it fits; scale=1 forces the normal size)."""
+    size = (cols, lines) renders it as in a window of that size."""
     if seed is not None:
         random.seed(seed)
     scene = manager.create(name)
     cv = Canvas(scene.CW, scene.CH)
     if size is not None:
-        k = scale or pick_scale(size[0], size[1], scene.MAX_SCALE)
-        cv = view_canvas(size[0], size[1], scene.CW, scene.CH, k=k)
+        cv = view_canvas(size[0], size[1], scene.CW, scene.CH)
         if cv is None:
             raise ValueError("window too small: at least %d x %d" % (MIN_W, MIN_H))
-        scene.set_scale(k)
         scene.set_view(cv.view())
     simulate(scene, seconds)
     scene.draw(cv)

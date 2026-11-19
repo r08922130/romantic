@@ -90,25 +90,14 @@ class Accessory:
     rows    [(dx, dy, markup), ...] relative to the skin's anchor for `slot`
             (markup is the same as in skins: {X} colour keys, $ = opaque)
     palette {key: style}; keys it lacks fall back to the skin's palette.
-    scaled  {k: rows} the same thing drawn bigger, for the 1.5x / 2x cats
-            (see "@scale" in skins/README-skins.md); a missing size uses
-            the next smaller one.
     A skin without that anchor simply wears nothing.
     """
 
-    def __init__(self, name, rows, palette=None, slot="hat", scaled=None):
+    def __init__(self, name, rows, palette=None, slot="hat"):
         self.name = name
         self.rows = rows
         self.palette = palette or {}
         self.slot = slot
-        self.scaled = dict(scaled or {})
-
-    def rows_for(self, k):
-        best, rows = 1, self.rows
-        for s, r in self.scaled.items():
-            if best < s <= k:
-                best, rows = s, r
-        return rows
 
 
 # =====================================================================
@@ -121,16 +110,14 @@ LAYER_KINDS = ("static", "walk", "tail", "head")
 
 
 class Skin:
-    def __init__(self, name, scale=1):
+    def __init__(self, name):
         self.name = name
-        self.scale = scale
         self.width = self.height = 0
         self.palette = {}
         self.eyes = dict(DEFAULT_EYES)
         self.head = []
         self.poses = {}
         self.anchors = {}         # "hat" -> (x, y) in head coordinates
-        self.scaled = {}          # k -> Skin: the same cat drawn k times bigger
         self._cache = {}
 
     def inherit(self, base):
@@ -140,18 +127,6 @@ class Skin:
         self.eyes = dict(base.eyes)
         self.head = list(base.head)
         self.poses = dict(base.poses)
-        for k, big in base.scaled.items():
-            mine = Skin(self.name, k)
-            mine.inherit(big)
-            self.scaled[k] = mine
-
-    def at(self, k):
-        """This cat drawn k times bigger (the biggest drawn size <= k)."""
-        best, skin = 1, self
-        for s, big in self.scaled.items():
-            if best < s <= k:
-                best, skin = s, big
-        return skin
 
     def head_width(self):
         return max([x + 1 for r in self.head for (x, _c, _k) in parse(r)] or [1])
@@ -195,7 +170,7 @@ class Skin:
                                   self.palette.get(k, DEFAULT_STYLE)))
             if L["kind"] == "head" and acc is not None and acc.slot in self.anchors:
                 ax, ay = self.anchors[acc.slot]
-                for adx, ady, row in acc.rows_for(self.scale):
+                for adx, ady, row in acc.rows:
                     for dx, ch, k in parse(row):
                         st = acc.palette.get(k) or self.palette.get(k, DEFAULT_STYLE)
                         cells.append((L["x"] + ax + adx + dx, L["y"] + ay + ady, ch, st))
@@ -206,14 +181,10 @@ class Skin:
         return cells
 
 
-GLOBAL_META = ("name", "base", "palette", "eyes")   # the same at every size
-
-
 def parse_skin(text, default_name, where, load_base):
-    # one section per size: the normal cat first, then "@scale K" sections
-    sections = {1: {"meta": {}, "head": None, "poses": {}, "line": 0}}
-    sec = sections[1]
-    meta = sec["meta"]
+    meta = {}
+    head = None
+    poses = {}
     pose = layer = rows = None
 
     def err(n, msg):
@@ -237,25 +208,14 @@ def parse_skin(text, default_name, where, load_base):
         if line.startswith("@"):
             parts = line[1:].split()
             cmd = parts[0].lower() if parts else ""
-            if cmd == "scale":
-                try:
-                    k = float(parts[1])
-                    k = int(k) if k == int(k) else k
-                    assert k > 1
-                except (IndexError, ValueError, AssertionError):
-                    err(n, "usage: @scale 1.5  or  @scale 2  (the cat drawn bigger)")
-                if k in sections:
-                    err(n, "@scale %s appears twice" % k)
-                sec = sections[k] = {"meta": {}, "head": None, "poses": {}, "line": n}
-                pose = layer = rows = None
-            elif cmd == "head":
-                sec["head"] = []
-                rows, layer, pose = sec["head"], None, None
+            if cmd == "head":
+                head = []
+                rows, layer, pose = head, None, None
             elif cmd == "pose":
                 if len(parts) < 2:
                     err(n, "usage: @pose NAME")
                 pose = []
-                sec["poses"][parts[1].lower()] = pose
+                poses[parts[1].lower()] = pose
                 rows = layer = None
             elif cmd == "layer":
                 if pose is None:
@@ -275,11 +235,7 @@ def parse_skin(text, default_name, where, load_base):
             continue
         if ":" in line:
             k, v = line.split(":", 1)
-            k = k.strip().lower()
-            if k in GLOBAL_META and sec is not sections[1]:
-                err(n, "'%s:' belongs at the top of the file (it is the same "
-                       "at every @scale)" % k)
-            sec["meta"][k] = (v.strip(), n)
+            meta[k.strip().lower()] = (v.strip(), n)
             rows = None
             continue
         err(n, "cannot understand this line (art rows must start with '|')")
@@ -287,6 +243,13 @@ def parse_skin(text, default_name, where, load_base):
     skin = Skin(meta.get("name", (default_name, 0))[0])
     if "base" in meta:
         skin.inherit(load_base(meta["base"][0]))
+    if "size" in meta:
+        v, n = meta["size"]
+        try:
+            w, h = [int(p) for p in v.replace("x", " ").split()]
+        except ValueError:
+            err(n, "size must look like '22 6' (width height)")
+        skin.width, skin.height = w, h
     if "palette" in meta:
         v, n = meta["palette"]
         for tok in v.split():
@@ -298,45 +261,6 @@ def parse_skin(text, default_name, where, load_base):
             except Exception:
                 err(n, "bad palette entry '%s' (use e.g. O=208 or W=255b)" % tok)
             skin.palette[k] = style(num, bold)
-    if "eyes" in meta:
-        v, n = meta["eyes"]
-        for tok in v.split():
-            k, _, c = tok.partition("=")
-            if not c or len(c) > 2:
-                err(n, "bad eyes entry '%s' (use e.g. happy=^ or wink=^-)" % tok)
-            skin.eyes[k] = c
-
-    for k, sec in sorted(sections.items()):
-        if k == 1:
-            target = skin
-        else:
-            target = skin.scaled.get(k)
-            if target is None:
-                target = skin.scaled[k] = Skin(skin.name, k)
-        apply_section(target, sec, err)
-        label = "" if k == 1 else " (@scale %s, line %d)" % (k, sec["line"])
-        if target.width <= 0 or target.height <= 0:
-            raise SkinError("%s%s: missing 'size: WIDTH HEIGHT'" % (where, label))
-        if not target.head:
-            raise SkinError("%s%s: missing @head" % (where, label))
-        for need in ("stand", "sit"):
-            if need not in target.poses:
-                raise SkinError("%s%s: missing '@pose %s'" % (where, label, need))
-    for big in skin.scaled.values():          # one palette / eyes for every size
-        big.name, big.palette, big.eyes = skin.name, skin.palette, skin.eyes
-    return skin
-
-
-def apply_section(skin, sec, err):
-    """size / anchors / @head / @pose of one size go onto `skin`."""
-    meta = sec["meta"]
-    if "size" in meta:
-        v, n = meta["size"]
-        try:
-            w, h = [int(p) for p in v.replace("x", " ").split()]
-        except ValueError:
-            err(n, "size must look like '22 6' (width height)")
-        skin.width, skin.height = w, h
     for a in ANCHORS:
         if a in meta:
             v, n = meta[a]
@@ -345,9 +269,25 @@ def apply_section(skin, sec, err):
             except ValueError:
                 err(n, "%s must look like '3 1' (x y inside the head)" % a)
             skin.anchors[a] = (ax, ay)
-    if sec["head"] is not None:
-        skin.head = sec["head"]
-    skin.poses.update(sec["poses"])
+    if "eyes" in meta:
+        v, n = meta["eyes"]
+        for tok in v.split():
+            k, _, c = tok.partition("=")
+            if not c or len(c) > 2:
+                err(n, "bad eyes entry '%s' (use e.g. happy=^ or wink=^-)" % tok)
+            skin.eyes[k] = c
+    if head is not None:
+        skin.head = head
+    skin.poses.update(poses)
+
+    if skin.width <= 0 or skin.height <= 0:
+        raise SkinError("%s: missing 'size: WIDTH HEIGHT'" % where)
+    if not skin.head:
+        raise SkinError("%s: missing @head" % where)
+    for need in ("stand", "sit"):
+        if need not in skin.poses:
+            raise SkinError("%s: missing '@pose %s'" % (where, need))
+    return skin
 
 def load_skin(name_or_path, skins_dir, _chain=()):
     path = name_or_path
@@ -365,19 +305,9 @@ def load_skin(name_or_path, skins_dir, _chain=()):
                       lambda base: load_skin(base, skins_dir, _chain + (key,)))
 
 
-def preview_skin(skin, color=True, accessory=None, scales=None):
-    """Every pose, every frame, facing right and left, as text lines; then
-    the same for each bigger size (@scale) the skin has."""
-    out = []
-    for k in [1] + sorted(skin.scaled):
-        if scales is None or k in scales:
-            out += preview_one(skin.at(k), color, accessory)
-    return out
-
-
-def preview_one(skin, color=True, accessory=None):
-    size = "" if skin.scale == 1 else "  @scale %s" % skin.scale
-    out = ["=== skin '%s'%s  (%d x %d) ===" % (skin.name, size, skin.width, skin.height)]
+def preview_skin(skin, color=True, accessory=None):
+    """Every pose, every frame, facing right and left, as text lines."""
+    out = ["=== skin '%s'  (%d x %d) ===" % (skin.name, skin.width, skin.height)]
     eyes = skin.eye_pair("normal")
     for pose in POSES:
         real = pose
@@ -612,16 +542,10 @@ class Cat:
         pose, walk, tail, eyes = self.look()
         if self.blink < 0 and eyes in ("normal", "wide", "wink"):
             eyes = "closed"
-        k = getattr(cv, "k", 1)
-        skin = self.skin.at(k)            # drawn bigger: the bigger drawing
-        cells = skin.cells(pose, walk, tail, skin.eye_pair(eyes), self.face,
-                           self.accessory)
-        if k == 1:
-            left = int(round(self.x - self.W / 2.0))
-            top = int(round(self.y - self.z - self.lift)) - self.H + 1
-        else:
-            left = int(round(self.x * k - skin.width / 2.0))
-            top = cv.py(self.y - self.z - self.lift) - skin.height + 1
+        cells = self.skin.cells(pose, walk, tail, self.skin.eye_pair(eyes), self.face,
+                                self.accessory)
+        left = int(round(self.x - self.W / 2.0))
+        top = int(round(self.y - self.z - self.lift)) - self.H + 1
         for (x, y, ch, st) in cells:
             cv.put(left + x, top + y, ch, st, ch == " ")
 

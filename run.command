@@ -6,30 +6,8 @@
 # =====================================================================
 cd "$(dirname "$0")" || exit 1
 
-# macOS Terminal: fill the screen (the font stays as it is), so the scene can
-# be drawn at its biggest size; the window is put back at the end.
-ZOOMED=""
-if [ "$TERM_PROGRAM" = "Apple_Terminal" ] && command -v osascript >/dev/null 2>&1; then
-    ZOOMED=$(osascript -l JavaScript 2>/dev/null <<'EOF'
-var win = Application("Terminal").windows[0];
-var was = win.zoomed();
-if (!was) { win.zoomed = true; }
-was ? "" : "yes";
-EOF
-)
-fi
-if [ -z "$ZOOMED" ]; then
-    printf '\033[8;30;90t\033[9;1t'  # other terminals: 90 x 30 at least, then maximised
-fi
+printf '\033[8;30;90t'              # ask for a 90 x 30 window (enough for the menu)
 
-restore_window() {
-    if [ -n "$ZOOMED" ]; then
-        osascript -l JavaScript >/dev/null 2>&1 <<'EOF'
-Application("Terminal").windows[0].zoomed = false;
-EOF
-    fi
-}
-trap restore_window EXIT
 PY=""
 for cand in python3 python; do
     if command -v "$cand" >/dev/null 2>&1 &&

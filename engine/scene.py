@@ -27,18 +27,9 @@ A concrete scene only fills in the hooks it needs (all optional):
     on_view(view)       the window size changed: view = (x0, y0, x1, y1), the
                         visible world (see engine/render.py "Window size");
                         add scenery for the margins of a wide window here
-    on_scale(k)         the scene is now drawn k times bigger (1, 1.5, 2;
-                        see engine/render.py "Three sizes"): build the art
-                        for that size here. Only called if MAX_SCALE > 1.
 
 Full-width things (ground, sea, ...) are drawn over cv.xs(); self.view is
-the visible world (cells of the canvas), self.ROAM the stage columns the
-cats may walk in.
-
-Drawing bigger: everything moves in stage units (78 x 27) at any size;
-cats, particles and the greeting are drawn bigger by the engine. A scene
-that has bigger art for its own things sets MAX_SCALE = 2 and draws them
-in cells of the k-times bigger stage (self.k, cv.px(), cv.py()).
+the visible world, self.ROAM the columns the cats may walk in.
 
 and class attributes (see below) for timing, floor lanes, seats, the cats'
 accessory, colours of the greeting and default settings.
@@ -49,7 +40,7 @@ import random
 
 from . import cats as catlib
 from .effects import Banner, Fx, HEART_RAMP, SPARK_RAMP, Z_RAMP
-from .render import CH, CW, clamp, stage_size
+from .render import CH, CW, clamp
 
 
 class BaseScene:
@@ -70,8 +61,7 @@ class BaseScene:
 
     ROAM_MARGIN = 45                     # how far past the stage cats may roam
                                          # in a wide window
-    MAX_SCALE = 1                        # biggest size this scene has art for
-                                         # (1, 1.5 or 2; see on_scale)
+
 
     # ---- timing ----
     INTRO_END = 0.0                     # no surprise before this
@@ -97,7 +87,6 @@ class BaseScene:
         self.heart = cfg.heart
         self.view = (0, 0, self.CW, self.CH)
         self.ROAM = (0, self.CW)
-        self.k = 1
         self.t = 0.0
         self.phase = "free"
         self.build(random.Random(self.SEED))
@@ -139,29 +128,10 @@ class BaseScene:
     def on_view(self, view):
         pass
 
-    def on_scale(self, k):
-        pass
-
-    def stage_w(self):
-        """The stage's width in cells at the current size."""
-        return stage_size(self.k, self.CW, self.CH)[0]
-
     def margin_columns(self):
         """Visible columns outside the stage (a wide window), left and right."""
         x0, _y0, x1, _y1 = self.view
-        sw = self.stage_w()
-        return [x for x in range(x0, x1) if x < 0 or x >= sw]
-
-    def set_scale(self, k):
-        """Called (by draw) with the canvas's size k; never above MAX_SCALE."""
-        k = min(k, self.MAX_SCALE)
-        if k == self.k:
-            return
-        self.k = k
-        self.on_scale(k)
-        if self.view != (0, 0, self.CW, self.CH):
-            view, self.view = self.view, None
-            self.set_view(view)                  # margins again, at the new size
+        return [x for x in range(x0, x1) if x < 0 or x >= self.CW]
 
     def set_view(self, view):
         """Called (by draw) when the window, and so the visible world, changes."""
@@ -170,11 +140,8 @@ class BaseScene:
             return
         self.view = view
         x0, _y0, x1, _y1 = view
-        k = float(self.k)
-        self.ROAM = (max(x0 / k if k != 1 else x0, -self.ROAM_MARGIN),
-                     min(x1 / k if k != 1 else x1, self.CW + self.ROAM_MARGIN))
+        self.ROAM = (max(x0, -self.ROAM_MARGIN), min(x1, self.CW + self.ROAM_MARGIN))
         self.on_view(view)
-
     # ------------------------------------------------------------------
     #  shared story
     # ------------------------------------------------------------------
@@ -249,7 +216,6 @@ class BaseScene:
     def draw(self, cv):
         t = self.t
         if hasattr(cv, "view"):
-            self.set_scale(getattr(cv, "k", 1))
             self.set_view(cv.view())
         cv.clear()
         self.draw_background(cv)

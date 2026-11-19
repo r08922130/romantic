@@ -16,9 +16,7 @@ python main.py --with 摸摸,逗逗     # 只讓這幾隻貓出場（名字用�
 python main.py --list-scenes       # 列出所有場景
 ```
 
-或直接雙擊 `run.bat`（會打開開始選單）。它會**把視窗放到全螢幕**（字體不變），畫面就會用最大的尺寸畫
-（見下面「三種大小」），結束後視窗改回原本大小。因為 Windows Terminal 不讓程式調整視窗
-（Windows 11 雙擊 .bat 預設就是開在它裡面），`run.bat` 一律會改開一個傳統主控台視窗（黑底的那種）來播放。
+或直接雙擊 `run.bat`（會打開開始選單）。
 
 ### Mac 版 🍎
 
@@ -39,7 +37,7 @@ python tools\make_mac_zip.py      # 產生 dist\工程師的浪漫-mac.zip
   `chmod +x run.command`
 - 需要 Python 3.7 以上。Mac 沒有時，`run.command` 會提示安裝方式
   （到 python.org 下載，或在終端機輸入 `xcode-select --install`）。
-- `run.command` 會**把視窗放到全螢幕**（字體不變，只改這個視窗），結束後改回原本大小。用的不是 Mac 內建「終端機」時，會請終端機把視窗調大。
+- `run.command` 會請終端機把視窗調成 90 × 30（放得下開始選單）。
 - 也可以在終端機直接執行：`python3 main.py --menu`
 
 ### 開始選單
@@ -69,14 +67,7 @@ python tools\make_mac_zip.py      # 產生 dist\工程師的浪漫-mac.zip
 - **任何視窗大小都可以**，執行中拉大、縮小視窗也會即時跟著變：
   - 視窗**比 78 × 27 大**（例如全螢幕）：畫面會填滿整個視窗。主角（聖誕樹、大阪城、晴空塔…）
     留在中間、站在底部，往左右延伸更多城市／海面／櫻花樹／小松樹，上方多出星空，貓咪也會走到兩側。
-  - **三種大小**：字體不變，視窗夠大時整個場景會**畫得更大**——更大的聖誕樹、禮物、星星，貓咪也換成更大的畫法：
-    | 尺寸 | 需要的視窗（欄 × 列） |
-    |---|---|
-    | 標準 | 78 × 27 |
-    | 1.5 倍 | 117 × 37 以上 |
-    | 2 倍 | 156 × 48 以上 |
-    雙擊 `run.bat` / `run.command` 會把視窗放到全螢幕，一般螢幕就會用到 2 倍。執行中拉大、縮小視窗也會即時換尺寸。
-    目前有三種大小的場景：聖誕節（其他場景先用標準尺寸＋延伸背景）。
+  - 想讓畫面本身變大，可以放大終端機的字體：`Ctrl + 滑鼠滾輪`（Mac：`⌘ +`）。
   - 視窗**比 78 × 27 小**：最小可到 **64 × 24**，會裁掉畫面左右邊緣和天空頂端，祝福語會自動移到看得到的位置。
     再小就會提示放大視窗。開始選單仍需要 78 × 27。
 - `Ctrl+C` 或 `q` / `Esc` 優雅離開；按 `s` 可立刻跳到驚喜橋段；按 `n` 切換到下一個場景。
@@ -214,7 +205,6 @@ python tools\make_mac_zip.py      # 產生 dist\工程師的浪漫-mac.zip
 | `--stay` | 祝福出現後一直留在畫面上 |
 | `--skip-intro` | 跳過開場動畫 |
 | `--ascii` | 愛心顯示不出來時，改用 `<3` |
-| `--maximize` | Windows 傳統主控台：視窗最大化，場景用最大的尺寸畫（`run.bat` 會自動加） |
 | `--fps 30` | 影格率 |
 | `--cats 檔案` | 使用另一份貓咪設定 |
 | `--preview-skin 造型` / `--preview-cats` | 預覽貓咪造型（會戴上目前場景的配件） |
@@ -231,7 +221,7 @@ X_mas/
 ├─ cats.json             有哪些貓
 ├─ skins/                貓咪造型 *.cat（只畫貓本身，不含帽子等配件）
 ├─ engine/               共用底層，不含任何節日邏輯
-│  ├─ render.py          Canvas 字元畫布、256 色、寬字元處理、三種大小（pick_scale）
+│  ├─ render.py          Canvas 字元畫布、256 色、寬字元處理
 │  ├─ effects.py         Fx 粒子、Starfield 星空、Fireworks 煙火、Banner 打字機祝福語
 │  ├─ sprites.py         Art 多行 ASCII 圖、Prop 地上的道具（貓可以躲在後面）、sym 左右對稱
 │  ├─ cats.py            Skin 造型、Accessory 配件、Cat / CalmCat / PlayfulCat
@@ -239,7 +229,7 @@ X_mas/
 │  ├─ manager.py         SceneManager：自動註冊、選擇、切換場景
 │  ├─ menu.py            開始選單：場景單選、貓咪複選、配件預覽
 │  ├─ settings.py        settings.json + 命令列 → 每個場景的設定
-│  └─ terminal.py        唯一的動畫主迴圈（畫面跟著視窗大小、自動選尺寸）、選單迴圈、按鍵（含方向鍵）、視窗太小提示
+│  └─ terminal.py        唯一的動畫主迴圈（畫面跟著視窗大小）、選單迴圈、按鍵（含方向鍵）、視窗太小提示
 ├─ scenes/               一個檔案 = 一個場景
 │  ├─ christmas.py       ChristmasScene：樹、禮物、燈、雪、聖誕帽、開場時間軸
 │  ├─ osaka.py           OsakaScene：大阪城、櫻花
@@ -279,15 +269,6 @@ X_mas/
 - `Starfield` 會自己把星星補滿舞台外的天空。
 - 需要在兩側多放東西（城市、樹…）就實作 `on_view(view)`，`view = (x0, y0, x1, y1)` 是看得到的範圍；
   `engine.render.lay_out()` 可以幫你一棟一棟往左／往右排過去。
-
-**三種大小**：視窗夠大時，場景會畫成 1.5 倍或 2 倍（`engine.render.pick_scale`），字體不變。
-貓咪、粒子、祝福語引擎會自動處理；場景自己的東西要有更大的畫法：
-
-- 設定 `MAX_SCALE = 2`（沒設就一直用標準尺寸，只延伸背景）。
-- 實作 `on_scale(k)`，建立 `k` 倍大小用的畫（`self.k` 是目前倍數）。
-- 所有動作、位置仍然用 78 × 27 的舞台單位；畫的時候 `cv` 的座標是放大後的格子，
-  用 `cv.px(x)` / `cv.py(y)` 把舞台位置換成格子。範例見 `scenes/christmas.py`。
-- 貓咪的大尺寸畫法寫在 `skins/*.cat` 的 `@scale 1.5` / `@scale 2` 段落（見 `skins/README-skins.md`）。
 
 **不用改任何其他檔案**：`SceneManager` 會自動找到 `scenes/` 裡的新場景，主迴圈也不用動。
 
