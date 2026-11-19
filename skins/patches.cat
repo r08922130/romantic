@@ -100,17 +100,17 @@ hat:      2 1
 
 @scale 2
 size:     40 12
-hat:      3 2
+hat:      4 2
 
 @head
 |
 |
-|  {C}/\_______/\
-| {C}/$$$$\{W}|{C}/$$$$\
-|{C}($$$${A}%L$$$%R$$$${C})
-| {C}\$$$$${P}v$$$$${C}/
-|{K}>==$$$${W}w$$$${K}==<
-|  {C}`-..___..-'
+|  {C}/\_________/\
+| {C}/$$$$$\{W}|{C}/$$$$$\
+|{C}($$$$${A}%L$$$%R$$$$${C})
+| {C}\$$$$$${P}v$$$$$${C}/
+|{K}>==$$$$${W}w$$$$${K}==<
+|   {C}`-..___..-'
 
 @pose stand
 @layer 0 0 tail
@@ -181,7 +181,7 @@ hat:      3 2
 | {O}(~{S}~{O}~{W}:::::::::{O}~{S}~{O}~)
 |  {O}\~{S}~{O}~{W}:::::::{O}~{S}~{O}~/
 |  {O}`-({W}u u{O})---({W}u u{O})-'
-@layer 10 0 head
+@layer 9 0 head
 
 @pose crouch
 @layer 0 2 tail
@@ -205,21 +205,21 @@ hat:      3 2
 @layer 23 4 head
 
 @pose peek
-@layer 10 2 head
+@layer 9 2 head
 @layer 11 10
 |{W}(u u)     (u u)
 
 @scale 1.5
 size:     28 9
-hat:      2 1
+hat:      3 1
 
 @head
 |
-| {C}/\_____/\
-|{C}/$$$\{W}|{C}/$$$\
-|{C}($${A}%L$$$%R$${C})
-| {C}\$$${P}v$$${C}/
-|{K}>=$$${W}w$$${K}=<
+| {C}/\_______/\
+|{C}/$$$$\{W}|{C}/$$$$\
+|{C}($$${A}%L$$$%R$$${C})
+| {C}\$$$${P}v$$$${C}/
+|{K}>=$$$${W}w$$$${K}=<
 
 @pose stand
 @layer 0 0 tail
@@ -244,7 +244,7 @@ hat:      2 1
 |  {W}\ \    / /
 |   {W}| |  | |
 |  {W}(u u)(u u)
-@layer 17 0 head
+@layer 15 0 head
 
 @pose run
 @layer 0 3 tail
@@ -264,7 +264,7 @@ hat:      2 1
 |        {W}| |  | |
 |        {W}| |  | |
 |       {W}(u u)(u u)
-@layer 17 0 head
+@layer 15 0 head
 
 @pose sit
 @layer 0 7 tail
@@ -278,7 +278,7 @@ hat:      2 1
 | {O}(~{S}~{O}~{W}:::::{O}~{S}~{O}~)
 |  {O}\~{S}~{O}~{W}:::{O}~{S}~{O}~/
 |  {O}`({W}u u{O})({W}u u{O})'
-@layer 8 0 head
+@layer 7 0 head
 
 @pose crouch
 @layer 0 1 tail
@@ -296,9 +296,9 @@ hat:      2 1
 | {O}(~~{S}~{O}~~{S}~{O}~~{S}~{W}:::::::
 | {O}(~{S}~{O}~~{S}~{O}~~{S}~{W}::::::::
 | {O}`({W}u u{O})-------({W}u u{O})
-@layer 17 3 head
+@layer 15 3 head
 
 @pose peek
-@layer 8 1 head
+@layer 7 1 head
 @layer 9 7
 |{W}(u u)  (u u)
