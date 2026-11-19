@@ -1,0 +1,304 @@
+# ------------------------------------------------------------------
+#  patches - the slim, playful one (photo 1):
+#    orange ears + orange "cap" around the eyes, white blaze down the
+#    middle of the face, white muzzle & pink nose, orange back/saddle,
+#    white belly & long white legs, striped orange tail with a white tip
+# ------------------------------------------------------------------
+name: patches
+size: 19 6
+#         ginger  stripes  white   nose    eyes    whiskers  cap(head) tail-tip
+palette:  O=208   S=166    W=255b  P=218   A=214b  K=245     C=208     T=255b
+eyes:     normal=o  wide=O  happy=^  closed=-  wink=^-
+# where a scene's accessory sits: a hat's brim starts at column 2, row 1
+hat:      2 1
+
+@head
+|
+|{C}/\___/\
+|{C}({A}%L{W}${P}.{W}${A}%R{C})
+| {K}>{W}${P}w{W}${K}<
+
+# ---------------- standing / walking ----------------
+@pose stand
+@layer 0 0 tail
+|{T} ,
+|{S}(
+|{O} \_
+---
+|{T},
+|{S} )
+|{O}/__
+@layer 3 2
+|{O}.-{S}~{O}~~{S}~{O}~~.
+@layer 2 3
+|{O}(~{S}~{O}~{W}::::::)
+@layer 3 4 walk
+|{W}| |    | |
+|{W}u u    u u
+---
+|{W} ||  ||
+|{W} uu  uu
+@layer 12 0 head
+
+# ---------------- running (stretched out) ----------------
+@pose run
+@layer 0 2 tail
+|{T}~{S}-
+---
+|{T}-{S}~
+@layer 2 2
+|{O}.-{S}~{O}~~{S}~{O}~~-.
+@layer 1 3
+|{O}(~{S}~{O}~{W}:::::::)
+@layer 0 4 walk
+|{W}//         \\
+---
+|    {W}||  ||
+|    {W}uu  uu
+@layer 12 0 head
+
+# ---------------- sitting ----------------
+@pose sit
+@layer 0 4 tail
+|{T}  ,
+|{O}({S}~{O}~{S}~{O}-
+---
+|{T}.
+|{T}~{O}~{S}~{O}~{S}-
+@layer 5 3
+|{O}/       \
+|{O}(~{W}:::::{O}~)
+|{O}`{W}u{O}-----{W}u{O}'
+@layer 6 0 head
+
+# ---------------- crouching before a pounce ----------------
+@pose crouch
+@layer 0 1 tail
+|{T} ,
+|{S}(
+|{O} \
+---
+|{T},
+|{S} )
+|{O} /
+@layer 3 3
+|{O}.-{S}~{O}~-.
+@layer 2 4
+|{O}(~{S}~{O}~{W}::::::
+|{O}`{W}uu{O}------{W}uu
+@layer 12 2 head
+
+# ---------------- peeking over a present ----------------
+@pose peek
+@layer 6 1 head
+@layer 6 5
+| {W}u   u
+
+# ================== bigger sizes (@scale) ==================
+# The same cat drawn bigger, used when the window is big enough
+# (see README-skins.md). Same palette and eyes as above.
+
+@scale 2
+size:     40 12
+hat:      3 2
+
+@head
+|
+|
+|  {C}/\_______/\
+| {C}/$$$$\{W}|{C}/$$$$\
+|{C}($$$({A}%L{C})$({A}%R{C})$$$)
+| {C}\$$$$_{P}v{C}_$$$$/
+|{K}>==$$${C}(_{W}w{C}_)$$${K}==<
+|  {C}`-..___..-'
+
+@pose stand
+@layer 0 0 tail
+|  {T},
+| {T}( )
+|  {S}\ \
+|   {O}\ \
+|    {O}\ \_
+---
+|    {T},
+|   {T}( )
+|   {S}/ /
+|  {O}/ /
+|  {O}\ \_
+@layer 6 4
+|  {O}.-~{S}~{O}~~{S}~{O}~~{S}~{O}~~{S}~{O}~~-.
+|{O}.'~{S}~{O}~~{S}~{O}~~{S}~{O}~~{S}~{O}~~{S}~{O}~~{S}~{O}~
+|{O}(~~{S}~{O}~~{S}~{O}~~{S}~{O}~~{W}::::::::::{O})
+| {O}\~{S}~{O}~~{S}~{O}~~{S}~{O}~{W}::::::::::{O}/
+@layer 8 8 walk
+| {W}| |          | |
+| {W}| |          | |
+| {W}| |          | |
+|{W}(u u)        (u u)
+---
+|   {W}\ \      / /
+|    {W}\ \    / /
+|    {W}| |    | |
+|   {W}(u u)  (u u)
+@layer 23 0 head
+
+@pose run
+@layer 0 4 tail
+|{T}~~-._
+|     {S}`-.
+---
+|   {T}_.-
+|{S}~~'  `-.
+@layer 5 4
+|   {O}.-~{S}~{O}~~{S}~{O}~~{S}~{O}~~{S}~{O}~~{S}~{O}~-.
+| {O}.'~{S}~{O}~~{S}~{O}~~{S}~{O}~~{S}~{O}~~{S}~{O}~~{S}~{O}~~
+|{O}(~~{S}~{O}~~{S}~{O}~~{S}~{O}~~{S}~{O}~{W}:::::::::::{O})
+| {O}\~{S}~{O}~~{S}~{O}~~{S}~{O}~~{W}::::::::::::{O}/
+@layer 0 8 walk
+|  {W}//                    \\
+| {W}//                      \\
+|{W}(u                        u)
+---
+|          {W}| |   | |
+|          {W}| |   | |
+|          {W}| |   | |
+|         {W}(u u) (u u)
+@layer 23 0 head
+
+@pose sit
+@layer 0 9 tail
+|  {T},
+| {T}( \
+|  {O}\_~{S}~{O}~{S}~{O}~{S}~{O}~-
+---
+|
+| {T}.
+|{O}(_~{S}~{O}~{S}~{O}~{S}~{O}~{S}~{O}~-
+@layer 9 6
+|   {O}/           \
+|  {O}/             \
+| {O}(~{S}~{O}~{W}:::::::::{O}~{S}~{O}~)
+| {O}(~{S}~{O}~{W}:::::::::{O}~{S}~{O}~)
+|  {O}\~{S}~{O}~{W}:::::::{O}~{S}~{O}~/
+|  {O}`-({W}u u{O})---({W}u u{O})-'
+@layer 10 0 head
+
+@pose crouch
+@layer 0 2 tail
+|  {T},
+| {T}( )
+|  {S}\ \
+|   {O}\ \
+|    {O}\ \
+---
+|    {T},
+|   {T}( )
+|   {S}/ /
+|  {O}/ /
+| {O}/ /
+@layer 5 7
+|     {O}.-~{S}~{O}~~{S}~{O}~-.
+|  {O}.-'~{S}~{O}~~{S}~{O}~~{S}~{O}~`-.
+| {O}(~~{S}~{O}~~{S}~{O}~~{S}~{O}~{W}:::::
+| {O}(~{S}~{O}~~{S}~{O}~~{S}~{O}~{W}::::::
+| {O}`({W}u u{O})-----({W}u u{O})
+@layer 23 4 head
+
+@pose peek
+@layer 10 2 head
+@layer 11 10
+|{W}(u u)     (u u)
+
+@scale 1.5
+size:     28 9
+hat:      2 1
+
+@head
+|
+| {C}/\_____/\
+|{C}/$$$\{W}|{C}/$$$\
+|{C}($({A}%L{C})$({A}%R{C})$)
+| {C}\$$_{P}v{C}_$$/
+|{K}>=${C}(_{W}w{C}_)${K}=<
+
+@pose stand
+@layer 0 0 tail
+| {T},
+|{T}( )
+| {S}\ \
+|  {O}\ \_
+---
+|   {T},
+|  {T}( )
+|  {S}/ /
+|  {O}\ \_
+@layer 4 3
+| {O}.-~{S}~{O}~~{S}~{O}~~{S}~{O}~~{S}~{O}~-.
+|{O}(~~{S}~{O}~~{S}~{O}~~{S}~{O}~{W}:::::::{O})
+| {O}\~{S}~{O}~~{S}~{O}~~{S}~{O}~{W}::::::{O}/
+@layer 6 6 walk
+| {W}| |      | |
+| {W}| |      | |
+|{W}(u u)    (u u)
+---
+|  {W}\ \    / /
+|   {W}| |  | |
+|  {W}(u u)(u u)
+@layer 17 0 head
+
+@pose run
+@layer 0 3 tail
+|{T}~-._
+|    {S}`-
+---
+|  {T}_.-
+|{S}~'  `-
+@layer 4 3
+|  {O}.-~{S}~{O}~~{S}~{O}~~{S}~{O}~~{S}~{O}~-.
+|{O}(~~{S}~{O}~~{S}~{O}~~{S}~{O}~~{W}::::::::{O})
+| {O}\~{S}~{O}~~{S}~{O}~~{S}~{O}~{W}::::::::{O}/
+@layer 0 6 walk
+|  {W}//               \\
+|{W}(u                  u)
+---
+|        {W}| |  | |
+|        {W}| |  | |
+|       {W}(u u)(u u)
+@layer 17 0 head
+
+@pose sit
+@layer 0 7 tail
+| {T},
+|{O}( \_~{S}~{O}~{S}~{O}~-
+---
+|{T}.
+|{O}(_~{S}~{O}~{S}~{O}~{S}~{O}~-
+@layer 7 5
+|  {O}/         \
+| {O}(~{S}~{O}~{W}:::::{O}~{S}~{O}~)
+|  {O}\~{S}~{O}~{W}:::{O}~{S}~{O}~/
+|  {O}`({W}u u{O})({W}u u{O})'
+@layer 8 0 head
+
+@pose crouch
+@layer 0 1 tail
+| {T},
+|{T}( )
+| {S}\ \
+|  {O}\ \
+---
+|   {T},
+|  {T}( )
+|  {S}/ /
+| {O}/ /
+@layer 3 5
+|   {O}.-~{S}~{O}~~{S}~{O}~-.
+| {O}(~~{S}~{O}~~{S}~{O}~~{S}~{W}:::::::
+| {O}(~{S}~{O}~~{S}~{O}~~{S}~{W}::::::::
+| {O}`({W}u u{O})-------({W}u u{O})
+@layer 17 3 head
+
+@pose peek
+@layer 8 1 head
+@layer 9 7
+|{W}(u u)  (u u)

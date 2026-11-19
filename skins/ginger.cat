@@ -1,0 +1,11 @@
+# ------------------------------------------------------------------
+#  ginger - slim all-orange tabby kitten (photo 4):
+#    orange everywhere with darker stripes, only a pale cream muzzle
+#    and belly, big round amber eyes.
+# ------------------------------------------------------------------
+name: ginger
+base: patches
+#         body    stripes  cream   cap     tail-tip  eyes
+palette:  O=208   S=166    W=223   C=208   T=208     A=214b
+# big round kitten eyes
+eyes:     normal=O  wide=@  happy=^  closed=-  wink=^-

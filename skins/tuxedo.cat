@@ -1,0 +1,10 @@
+# ------------------------------------------------------------------
+#  tuxedo - black & white cat (photo 3, left):
+#    black ears/cap and black back, white blaze, white muzzle, chest
+#    and legs, an all-black tail, yellow-green eyes.
+#  Made in a few lines: same shape as "patches", different colours.
+# ------------------------------------------------------------------
+name: tuxedo
+base: patches
+#         body    stripes  cap     tail-tip  eyes
+palette:  O=240   S=238    C=240   T=240     A=149b

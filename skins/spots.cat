@@ -1,0 +1,11 @@
+# ------------------------------------------------------------------
+#  spots - mostly-white cat with a few orange spots (photo 3, right):
+#    orange cap & ears with a white blaze, white body sprinkled with
+#    orange spots, orange-and-white ringed tail, pale yellow-green eyes.
+#  Trick: the body colour (O) is white, so the "stripes" (S) on the
+#  back become orange spots and the tail becomes ringed.
+# ------------------------------------------------------------------
+name: spots
+base: patches
+#         body    spots   cap     tail-tip  eyes
+palette:  O=255b  S=208   C=208   T=208     A=186b

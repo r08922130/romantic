@@ -1,0 +1,195 @@
+# ------------------------------------------------------------------
+#  tabby - the round, calm one (photo 2): striped orange tabby,
+#  white blaze & muzzle, pink nose, amber eyes, white chest and paws
+#  (see README-skins.md for how this file works)
+# ------------------------------------------------------------------
+name: tabby
+size: 22 6
+#         fur    stripes  white   nose    eyes    whiskers
+palette:  O=208  S=130    W=255b  P=218   A=214b  K=245
+eyes:     normal=o  wide=O  happy=^  closed=-  wink=^-
+# where a scene's accessory sits: a hat's brim starts at column 3, row 1
+hat:      3 1
+
+@head
+|
+| {O}/\___/\
+|{O}({S}={A}%L{W}${P}.{W}${A}%R{S}={O})
+| {O}${K}>{W}${P}w{W}${K}<{O}$
+
+# ---------------- standing / walking ----------------
+@pose stand
+@layer 0 1 tail
+|{O} ,
+|{S}(
+|{O} \
+---
+|{O},
+|{S} )
+|{O} /
+@layer 0 2
+|   {O}.-{S}={O}~{S}={O}~{S}={O}-.
+|  {O}/{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~
+| {O}({S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{W}:::::{O})
+@layer 0 5 walk
+|  {O}`-{W}uu{O}----------{W}uu{O}-'
+---
+|  {O}`---{W}uu{O}------{W}uu{O}---'
+@layer 12 0 head
+
+# ---------------- sitting ----------------
+@pose sit
+@layer 0 4 tail
+|{O} ,
+|{S}({O}~{S}~{O}~-
+---
+|{O}.
+|{O}~{S}~{O}~{S}~{O}-
+@layer 6 3
+|{O}/         \
+@layer 4 4
+|{O}({S}={O}~{S}={O}~{W}:::::{O}~{S}={O}~{S}={O})
+@layer 5 5
+|{O}`-{W}uu{O}-----{W}uu{O}-'
+@layer 7 0 head
+
+# ---------------- curled up asleep ----------------
+@pose sleep
+@layer 2 4
+|{O}.-{S}={O}~{S}={O}~{S}={O}~-.
+@layer 1 5
+|{O}({S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={W}uu
+@layer 12 2 head
+
+# run / crouch / peek are not drawn -> they fall back automatically
+
+# ================== bigger sizes (@scale) ==================
+# The same cat drawn bigger, used when the window is big enough
+# (see README-skins.md). Same palette and eyes as above.
+
+@scale 2
+size:     44 12
+hat:      5 2
+
+@head
+|
+|
+|   {O}/\_________/\
+|  {O}/${S}={O}~{S}=$$$$$={O}~{S}=${O}\
+| {O}({S}=$$${O}({A}%L{O})$({A}%R{O})$$${S}={O})
+|  {O}\{S}=$$${O}._{P}v{O}_.$$${S}={O}/
+| {K}>{S}==$$${O}(_{W}w{O}_)$$${S}=={K}<
+|   {O}`-.._____..-'
+
+@pose stand
+@layer 0 2 tail
+|  {O}_
+| {S}( )
+|  {O}\ \
+|   {O}\ \
+|    {O}\ \
+---
+|    {O}_
+|   {S}( )
+|   {O}/ /
+|  {O}/ /
+| {O}/ /
+@layer 4 4
+|      {O}.-{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}-.
+|    {O}.'{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~.
+|   {O}/{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~
+|  {O}({S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~
+|  {O}({S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}=
+|  {O}({S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{W}::::::::{O})
+|   {O}\{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{W}::::::::{O}/
+@layer 4 11 walk
+|    {O}`-.({W}uu{O}).-----------.({W}uu{O}).-'
+---
+|    {O}`---.({W}uu{O}).-------.({W}uu{O}).---'
+@layer 24 0 head
+
+@pose sit
+@layer 0 9 tail
+|  {O}_
+| {O}( \{S}={O}~{S}={O}~{S}={O}~-
+|
+---
+|
+| {O}.
+|{O}(_{S}={O}~{S}={O}~{S}={O}~{S}={O}~-
+@layer 11 6
+|   {O}/               \
+|  {O}/{S}={O}~{S}=           ={O}~{S}={O}\
+| {O}({S}={O}~{S}={O}~{S}={O}~{W}:::::::::{O}~{S}={O}~{S}={O})
+| {O}({S}={O}~{S}={O}~{S}={O}~{W}:::::::::{O}~{S}={O}~{S}={O})
+|  {O}\{S}={O}~{S}={O}~{S}={O}~{W}:::::::{O}~{S}={O}~{S}={O}/
+|  {O}`-.({W}uu{O})-------({W}uu{O}).-'
+@layer 13 0 head
+
+@pose sleep
+@layer 3 7
+|      {O}.-{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}-.
+|    {O}.'{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~
+|   {O}({S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}=
+|  {O}({S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~({W}uu{O})
+|   {O}`-.{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}-'
+@layer 24 4 head
+
+@scale 1.5
+size:     33 9
+hat:      4 1
+
+@head
+|
+|  {O}/\_______/\
+| {O}/${S}={O}~{S}=$$$={O}~{S}=${O}\
+|{O}({S}=$${O}({A}%L{O})$({A}%R{O})$${S}={O})
+| {O}\{S}=$$${O}_{P}v{O}_$$${S}={O}/
+|{K}>{S}==$${O}(_{W}w{O}_)$${S}=={K}<
+
+@pose stand
+@layer 0 1 tail
+| {O}_
+|{S}( )
+| {O}\ \
+|  {O}\ \
+---
+|   {O}_
+|  {S}( )
+|  {O}/ /
+| {O}/ /
+@layer 3 3
+|    {O}.-{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~-.
+|  {O}.'{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}=
+| {O}({S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}=
+| {O}({S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{W}::::::{O})
+|  {O}\{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{W}::::::{O}/
+@layer 3 8 walk
+|   {O}`-.({W}uu{O}).--------.({W}uu{O}).'
+---
+|   {O}`---.({W}uu{O}).----.({W}uu{O}).--'
+@layer 18 0 head
+
+@pose sit
+@layer 0 6 tail
+|  {O}_
+| {O}( \{S}={O}~{S}={O}~-
+|
+---
+|
+| {O}.
+|{O}(_{S}={O}~{S}={O}~{S}={O}~-
+@layer 8 5
+|  {O}/{S}={O}~         ~{S}={O}\
+| {O}({S}={O}~{S}={O}~{W}:::::::{O}~{S}={O}~{S}={O})
+|  {O}\{S}={O}~{S}={O}~{W}:::::{O}~{S}={O}~{S}={O}/
+|  {O}`-({W}uu{O})-----({W}uu{O})-'
+@layer 9 0 head
+
+@pose sleep
+@layer 2 5
+|     {O}.-{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}-.
+|   {O}.'{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~
+|  {O}({S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}({W}uu{O})
+|   {O}`-.{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}~{S}={O}-'
+@layer 18 3 head

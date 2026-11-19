@@ -1,0 +1,8 @@
+{
+  "_comment": "Fixed cat line-up for the regression test (do not edit; cats.json may change freely).",
+  "skins_dir": "../skins",
+  "cats": [
+    {"name": "A", "skin": "tabby", "personality": "calm", "enter_from": "left", "enter_at": 22},
+    {"name": "B", "skin": "patches", "personality": "playful", "enter_from": "right", "enter_at": 18}
+  ]
+}

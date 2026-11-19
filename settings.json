@@ -1,0 +1,41 @@
+{
+  "_comment": "Edit me! Command-line options (e.g. --wish \"...\") still override these.",
+
+  "scene": "christmas",
+
+  "heart": "♥",
+  "stay": false,
+  "skip_intro": false,
+  "fps": 30,
+  "cats": "cats.json",
+
+  "scenes": {
+    "christmas": {
+      "greeting": "Merry Christmas, My Love!",
+      "wish": "Every day with you feels like Christmas.",
+      "surprise_at": 70,
+      "every": 75,
+      "hold": 30
+    },
+    "osaka": {
+      "greeting": "Osaka is sweeter with you, My Love!",
+      "wish": "Let's walk under the cherry blossoms together."
+    },
+    "tokyo": {
+      "greeting": "You light up my Tokyo nights, My Love!",
+      "wish": "Higher than the Skytree - that's how much I love you."
+    },
+    "busan": {
+      "greeting": "Busan by the sea with you, My Love!",
+      "wish": "Let's watch the waves and the fireworks together."
+    },
+    "taipei101": {
+      "greeting": "Happy New Year, My Love!",
+      "wish": "Let's count down to every new year together."
+    },
+    "seoul": {
+      "greeting": "Saranghae, My Love!",
+      "wish": "Let's lock our love at Namsan Tower forever."
+    }
+  }
+}

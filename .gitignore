@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+
+# build output (tools/make_*_zip.py) and previews
+dist/
+
+# local editor / tool settings
+.claude/
+
+# the original request notes
+x_mas_prompt_*.txt

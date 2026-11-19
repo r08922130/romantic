@@ -1,0 +1,49 @@
+{
+  "skins_dir": "skins",
+  "cats": [
+    {
+      "name": "摸摸",
+      "skin": "tabby",
+      "personality": "calm",
+      "enter_from": "left",
+      "enter_at": 22,
+      "speed": 1.0
+    },
+    {
+      "name": "沐沐",
+      "skin": "patches",
+      "personality": "playful",
+      "enter_from": "right",
+      "enter_at": 18,
+      "speed": 1.0
+    },
+    {
+      "name": "逗逗",
+      "skin": "tuxedo",
+      "personality": "calm",
+      "enter_from": "left",
+      "enter_at": 27,
+      "speed": 0.9,
+      "enabled": false
+    },
+    {
+      "name": "妃妃",
+      "skin": "spots",
+      "personality": "playful",
+      "enter_from": "right",
+      "enter_at": 25,
+      "speed": 0.95,
+      "enabled": false
+    },
+    {
+      "name": "波波",
+      "skin": "ginger",
+      "personality": "playful",
+      "enter_from": "left",
+      "enter_at": 30,
+      "speed": 1.1,
+      "jump": 1.1,
+      "enabled": false
+    }
+  ]
+}
