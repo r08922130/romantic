@@ -18,11 +18,6 @@ from engine.render import Canvas, text_width  # noqa: E402
 CATS = os.path.join(ROOT, "cats.json")
 
 
-def only_cats(scene):
-    """The scene's cats, without the people walking with them."""
-    return [c for c in scene.cats if not getattr(c, "is_person", False)]
-
-
 def menu(**kw):
     m = SceneManager("scenes", {}, {}, {"cats": CATS})
     return m, Menu(m, CATS, kw.pop("scene", "christmas"), "工程師的浪漫", **kw)
@@ -118,9 +113,9 @@ class CatSelectionTests(unittest.TestCase):
         m.only_cats = last3                                  # even disabled ones
         random.seed(1)
         sc = m.create("christmas")
-        self.assertEqual([c.name for c in only_cats(sc)], [cfg["cats"][i]["name"] for i in last3])
+        self.assertEqual([c.name for c in sc.cats], [cfg["cats"][i]["name"] for i in last3])
         m.only_cats = [last3[-1]]
-        self.assertEqual(len(only_cats(m.create("tokyo"))), 1)
+        self.assertEqual(len(m.create("tokyo").cats), 1)
         m.only_cats = [0, 1, 2, 3]
         with self.assertRaises(catlib.ConfigError):          # 4 is too many
             m.create("christmas")

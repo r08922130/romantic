@@ -131,11 +131,10 @@ def main(argv=None):
 
         if args.menu:
             from engine.menu import Menu
-            picked = terminal.run_menu(Menu(manager, cfg.cats, name, PROJECT_NAME,
-                                            manager.only_cats, manager.only_people))
+            picked = terminal.run_menu(Menu(manager, cfg.cats, name, PROJECT_NAME, manager.only_cats))
             if picked is None:
                 return                                   # quit from the menu
-            name, manager.only_cats, manager.only_people = picked
+            name, manager.only_cats = picked
             cfg = manager.settings_for(name)
         manager.create(name)     # build once up front so config errors show plainly
     except (catlib.ConfigError, catlib.SkinError) as e:

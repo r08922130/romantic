@@ -54,10 +54,6 @@ python tools\make_mac_zip.py      # 產生 dist\工程師的浪漫-mac.zip
   > [x] 沐沐      patches   調皮          |   (~~~-`u-----u'            |
     [ ] 逗逗      tuxedo    穩重          |        沐沐  (調皮)         |
     ...
-  人物（最多 2 位）
-    [x] 我        boyfriend
-    [x] 女朋友    girlfriend
-
     [  開始播放  ]
       上下鍵 移動   空白鍵 選擇/勾選   Enter 開始   a 清除勾選   q 離開
 ```
@@ -66,7 +62,6 @@ python tools\make_mac_zip.py      # 產生 dist\工程師的浪漫-mac.zip
 - 在選單勾選的貓會直接出場，不受 `cats.json` 的 `enabled` 影響（不會改到設定檔）。
 - **最多 3 隻貓**一起出場：已勾 3 隻時再勾會提示「最多只能選 3 隻貓咪」；一隻都沒勾時不能開始。
 - 按 `a` 清除所有勾選，再按一次勾選前 3 隻。
-- 「人物」是你們兩個人（見下面「你們兩個人」），也可以取消勾選，只讓貓咪出場。
 
 - 建議使用 **Windows Terminal**（PowerShell 5/7 皆可）。
 - **任何視窗大小都可以**，執行中拉大、縮小視窗也會即時跟著變：
@@ -114,20 +109,6 @@ python tools\make_mac_zip.py      # 產生 dist\工程師的浪漫-mac.zip
 每隻貓都是獨立的**狀態機**（`CalmCat` / `PlayfulCat`，在 `engine/cats.py`），移動有加減速，面向會左右鏡像，
 會在禮物前方或後方走動（躲在禮物後面時會被禮物遮住），不會走進樹幹。
 
-## 你們兩個人 💑
-
-除了貓咪，畫面裡也有**你和女朋友**（照著照片畫的小人）：
-
-| | 我（`boyfriend`） | 女朋友（`girlfriend`） |
-|---|---|---|
-| 外觀 | 黑色短髮、圓框眼鏡、淺藍 T 恤、黑色斜背包、黑短褲 | 咖啡色瀏海短髮、圓框眼鏡、白底藍條紋襯衫配白色內搭 |
-
-- 會走進場、到處走走、看著聖誕樹（或大阪城、晴空塔…）、比 YA（眨一隻眼，旁邊冒出小星星）、
-  走到對方身邊一起冒愛心；貓咪也會跑來蹭你們。
-- 每個場景都會戴上那個場景的配件（聖誕節就戴聖誕帽）。
-- 驚喜時，你們兩個站在畫面正中間面對面、愛心飄起來，貓咪坐在兩旁。
-- 名字、進場時間寫在 `cats.json` 的 `"people"`；造型在 `skins/boyfriend.cat`、`skins/girlfriend.cat`（格式跟貓一樣）。
-
 ## 設定有哪些貓 🐱（`cats.json`）
 
 ```json
@@ -139,10 +120,6 @@ python tools\make_mac_zip.py      # 產生 dist\工程師的浪漫-mac.zip
     { "name": "逗逗",    "skin": "tuxedo",  "personality": "calm",    "enter_from": "left",  "enter_at": 27, "enabled": false },
     { "name": "妃妃",     "skin": "spots",   "personality": "playful", "enter_from": "right", "enter_at": 25, "enabled": false },
     { "name": "波波",   "skin": "ginger",  "personality": "playful", "enter_from": "left",  "enter_at": 30, "enabled": false }
-  ],
-  "people": [
-    { "name": "我",     "skin": "boyfriend",  "enter_from": "left",  "enter_at": 14 },
-    { "name": "女朋友", "skin": "girlfriend", "enter_from": "right", "enter_at": 16 }
   ]
 }
 ```
@@ -163,7 +140,6 @@ python tools\make_mac_zip.py      # 產生 dist\工程師的浪漫-mac.zip
 | `speed` / `jump` | 速度、跳躍力倍率（1.0 = 正常） |
 | `enabled` | `false` = 暫時不出場（逗逗、妃妃、波波預設關閉，改成 `true` 就會出現） |
 
-- `"people"`（人物）的欄位一樣是 `name`、`skin`、`enter_from`、`enter_at`、`speed`、`enabled`，最多 2 位。
 - 驚喜時，貓咪依清單順序輪流坐到樹的左、右兩側；**同時最多 3 隻**（`cats.json` 裡可以放更多隻，但沒關閉的不能超過 3 隻）。
 - 要用另一份設定：`python main.py --cats 我的貓.json`
 - 自己畫新造型：請看 [`skins/README-skins.md`](skins/README-skins.md)
@@ -242,13 +218,13 @@ X_mas/
 ├─ run.command           Mac：雙擊執行（開啟選單）
 ├─ tools/make_mac_zip.py 打包 Mac 版 zip（run.command 帶可執行權限）
 ├─ settings.json         祝福語、時間、預設場景（可分場景設定）
-├─ cats.json             有哪些貓、哪些人物
+├─ cats.json             有哪些貓
 ├─ skins/                貓咪造型 *.cat（只畫貓本身，不含帽子等配件）
 ├─ engine/               共用底層，不含任何節日邏輯
 │  ├─ render.py          Canvas 字元畫布、256 色、寬字元處理
 │  ├─ effects.py         Fx 粒子、Starfield 星空、Fireworks 煙火、Banner 打字機祝福語
 │  ├─ sprites.py         Art 多行 ASCII 圖、Prop 地上的道具（貓可以躲在後面）、sym 左右對稱
-│  ├─ cats.py            Skin 造型、Accessory 配件、Cat / CalmCat / PlayfulCat / Person（人物）
+│  ├─ cats.py            Skin 造型、Accessory 配件、Cat / CalmCat / PlayfulCat
 │  ├─ scene.py           BaseScene：場景生命週期（進場→自由玩→集合→祝福）
 │  ├─ manager.py         SceneManager：自動註冊、選擇、切換場景
 │  ├─ menu.py            開始選單：場景單選、貓咪複選、配件預覽
