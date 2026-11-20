@@ -92,8 +92,10 @@ class BaseScene:
         self.build(random.Random(self.SEED))
         self.fx = Fx()
         self.banner = Banner(cfg.greeting, cfg.wish, self.heart, self.CW, **self.BANNER)
+        # the cats, then the people (catlib.Person) - all walk around together
         self.cats = catlib.load_cats(cfg.cats, self, accessory=self.CAT_ACCESSORY,
-                                     only=getattr(cfg, "only_cats", None))
+                                     only=getattr(cfg, "only_cats", None),
+                                     only_people=getattr(cfg, "only_people", None))
         self.next_surprise = max(cfg.surprise_at,
                                  max(c.enter_at for c in self.cats) + 8.0)
         self.hold_t0 = 0.0
@@ -154,14 +156,25 @@ class BaseScene:
             c.next()
         self.next_surprise = self.t + self.cfg.surprise_at
 
+    PEOPLE_GAP = 5                       # people stand CX -/+ this, facing each other
+
     def seats(self):
-        """Seats for the surprise: alternating left / right of CX."""
+        """Seats for the surprise: the people in the middle facing each other,
+        the cats alternating left / right of them."""
         out = []
-        per_side = (len(self.cats) + 1) // 2
+        people = [c for c in self.cats if getattr(c, "is_person", False)]
+        cats = [c for c in self.cats if not getattr(c, "is_person", False)]
+        for k, p in enumerate(people):
+            left = k % 2 == 0
+            lo, hi = p.bounds()
+            x = clamp(self.CX - self.PEOPLE_GAP if left else self.CX + self.PEOPLE_GAP, lo, hi)
+            out.append((p, x, 25.9, 1 if left else -1))
+        inner = self.SEAT_INNER + (9 if people else 0)
+        per_side = (len(cats) + 1) // 2
         step = self.SEAT_STEP if per_side <= 2 else 20.0 / (per_side - 1)  # squeeze 3+
-        for k, c in enumerate(self.cats):
+        for k, c in enumerate(cats):
             idx, left = k // 2, k % 2 == 0
-            off = self.SEAT_INNER + idx * step
+            off = inner + idx * step
             lo, hi = c.bounds()
             x = clamp(self.CX - off if left else self.CX + off, lo, hi)
             y = self.SEAT_ROWS[idx % len(self.SEAT_ROWS)]

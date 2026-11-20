@@ -25,6 +25,7 @@ class SceneManager:
         self.cli = cli or {}
         self.ascii_heart = ascii_heart
         self.only_cats = None      # positions in cats.json chosen in the menu / --with
+        self.only_people = None    # positions in cats.json "people" chosen in the menu
         self.discover(package)
 
     # ---------- registration ----------
@@ -72,6 +73,7 @@ class SceneManager:
         cfg = settings_mod.resolve(self.get(name), self.top, self.per_scene,
                                    self.cli, self.ascii_heart)
         cfg.only_cats = self.only_cats
+        cfg.only_people = self.only_people
         return cfg
 
     def create(self, name):

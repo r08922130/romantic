@@ -8,7 +8,9 @@ cats.py - the cat characters, shared by every scene
   * Cat       - movement, jumping, drawing (shared by every personality)
   * CalmCat   - "calm":    slow, sits, naps, gazes at the scene, follows friends
   * PlayfulCat- "playful": runs, hops, hides behind props, pounces, visits
-  * load_cats - reads cats.json and builds the cats
+  * Person    - a person (the two of you): strolls, looks at the scene, does
+                a peace sign, keeps close to the other person
+  * load_cats - reads cats.json ("cats" and "people") and builds them
 
 Nothing in here knows about a particular holiday. The world (scene) a cat
 lives in provides (engine/scene.py BaseScene has all of them):
@@ -309,7 +311,7 @@ def preview_skin(skin, color=True, accessory=None):
     """Every pose, every frame, facing right and left, as text lines."""
     out = ["=== skin '%s'  (%d x %d) ===" % (skin.name, skin.width, skin.height)]
     eyes = skin.eye_pair("normal")
-    for pose in POSES:
+    for pose in POSES + tuple(p for p in skin.poses if p not in POSES):
         real = pose
         while real not in skin.poses and real in FALLBACK:
             real = FALLBACK[real]
@@ -873,9 +875,120 @@ class PlayfulCat(Cat):
             self.begin_zoom()
 
 
+# =====================================================================
+#  a person: you two, walking around the scene with the cats
+# =====================================================================
+class Person(Cat):
+    """Poses (skins/girlfriend.cat, boyfriend.cat): "stand" (walking),
+    "sit" (standing still - people don't sit down here) and "peace"
+    (a peace sign). The surprise puts the people in the middle, facing
+    each other (BaseScene.seats)."""
+    ACCEL = 4.0
+    is_person = True
+
+    def enter_speed(self):
+        return 6.0 * self.spd
+
+    def enter(self):
+        Cat.enter(self)
+        tx = self.w.CX + (16 if self.enter_from == "right" else -16) + random.uniform(-3, 3)
+        self.path = [(tx, self.y, self.enter_speed())]
+
+    def look(self):
+        eyes = "normal"
+        if self.state in ("pair", "final", "nuzzled", "gather"):
+            eyes = "happy"
+        if self.state == "peace":
+            return ("peace", 0, 0, "wink")
+        if self.speed() > 0.8:
+            return ("stand", int(self.phase / 1.3), 0, eyes)
+        return ("sit", 0, 0, eyes)
+
+    def partner_person(self):
+        ps = [c for c in self.others() if getattr(c, "is_person", False)]
+        return ps[0] if ps else None
+
+    def next(self, after_move=False):
+        mate = self.partner_person()
+        free = mate is not None and mate.state in ("idle", "look", "stroll")
+        opts = [("idle", 2.5), ("look", 2.4), ("peace", 1.5),
+                ("stroll", 0.0 if after_move else 3.0), ("pair", 2.5 if free else 0.0)]
+        name = self.pick(opts)
+        self.last = name
+        lo, hi = self.bounds()
+        if name == "idle":
+            self.go("idle", random.uniform(2.5, 5.0))
+        elif name == "look":
+            self.face = 1 if self.x < self.w.CX else -1
+            self.go("look", random.uniform(3.0, 5.0))
+        elif name == "peace":
+            self.stop()
+            self.go("peace", random.uniform(2.2, 3.2))
+        elif name == "pair":
+            side = -1 if self.x < mate.x else 1
+            tx = clamp(mate.x + side * (self.W + 1), lo, hi)
+            self.partner = mate
+            self.path = [(tx, mate.y, 5.0 * self.spd)]
+            self.go("goto")
+        else:
+            tx = self.x
+            for _ in range(10):
+                tx = random.uniform(lo, hi)
+                if abs(tx - self.x) > 8 and self.clear_of_others(tx, 6):
+                    break
+            self.path = [(tx, self.lane(), 4.5 * self.spd)]
+            self.go("stroll")
+
+    def u_enter(self, dt):
+        if self.walk_path(dt):
+            self.face = 1 if self.x < self.w.CX else -1
+            self.go("look", 2.5)
+
+    def u_idle(self, dt):
+        if self.st > self.dur:
+            self.next()
+
+    u_look = u_idle
+
+    def u_peace(self, dt):
+        if int(self.st * 2.0) != int((self.st - dt) * 2.0):
+            hx, hy = self.head_pos()
+            self.w.fx.emit(hx + self.face * 5 + random.uniform(-1, 1), hy + 1, 0, -1.0, 0.8,
+                           random.choice("*+"), self.w.SPARK_RAMP)
+        if self.st > self.dur:
+            self.next()
+
+    def u_stroll(self, dt):
+        if self.walk_path(dt):
+            self.next(after_move=True)
+
+    def u_goto(self, dt):
+        mate = self.partner
+        if mate is None or not mate.visible or mate.state in ("gather", "final"):
+            return self.next(after_move=True)
+        if self.walk_path(dt):
+            self.face = 1 if mate.x > self.x else -1
+            self.go("pair", 4.0)
+            if mate.state in ("idle", "look", "stroll"):
+                mate.stop()
+                mate.face = -self.face
+                mate.partner = self
+                mate.go("pair", 4.0)
+
+    def u_pair(self, dt):
+        self.hearts(1.2)
+        if self.st > self.dur:
+            self.next()
+
+    def u_final(self, dt):
+        if self.w.phase == "hold":
+            self.hearts(0.8)
+
+
 PERSONALITIES = {"calm": CalmCat, "playful": PlayfulCat}
 
 MAX_CATS = 3            # how many cats may be on stage together
+MAX_PEOPLE = 2          # ... and people
 
 
 # =====================================================================
@@ -917,9 +1030,10 @@ def check_count(n):
                           "/ 最多只能選 %d 隻貓" % (MAX_CATS, n, MAX_CATS))
 
 
-def load_cats(path, world, accessory=None, only=None):
-    """Build the cats. `only` = positions in the "cats" list to use (ignores
-    "enabled"); None = every cat that is enabled."""
+def load_cats(path, world, accessory=None, only=None, only_people=None):
+    """Build the cats, then the people. `only` / `only_people` = positions in
+    the "cats" / "people" lists to use (ignores "enabled"); None = every
+    enabled one."""
     cfg, skins_dir = read_config(path)
     cats = []
     if only is not None:
@@ -946,12 +1060,46 @@ def load_cats(path, world, accessory=None, only=None):
             speed=float(c.get("speed", 1.0)),
             jump=float(c.get("jump", 1.0))))
         cats[-1].accessory = accessory
+    cats += load_people(cfg, path, skins_dir, world, accessory, only_people)
     if not cats:
         raise ConfigError("%s: no cat selected / every cat is disabled" % path)
     return cats
 
 
+def people_entries(cfg, path):
+    people = cfg.get("people", [])
+    if not isinstance(people, list):
+        raise ConfigError("%s: \"people\" must be a list [ ... ]" % path)
+    return people
+
+
+def load_people(cfg, path, skins_dir, world, accessory=None, only=None):
+    """The "people" list of cats.json -> Person characters."""
+    people = people_entries(cfg, path)
+    if only is not None:
+        entries = [people[i] for i in only if 0 <= i < len(people)]
+    else:
+        entries = [p for p in people if p.get("enabled", True)]
+    if len(entries) > MAX_PEOPLE:
+        raise ConfigError("at most %d people can be on stage together / 最多 %d 個人"
+                          % (MAX_PEOPLE, MAX_PEOPLE))
+    out = []
+    for i, p in enumerate(entries):
+        if "skin" not in p:
+            raise ConfigError("person #%d in %s has no \"skin\"" % (i + 1, path))
+        try:
+            skin = load_skin(p["skin"], skins_dir)
+        except SkinError as e:
+            raise ConfigError(str(e))
+        out.append(Person(world, skin, name=p.get("name", ""),
+                          enter_at=float(p.get("enter_at", 14.0 + 2.0 * i)),
+                          enter_from=p.get("enter_from", "left" if i == 0 else "right"),
+                          speed=float(p.get("speed", 1.0))))
+        out[-1].accessory = accessory
+    return out
+
 def config_skins(path):
     cfg, skins_dir = read_config(path)
-    # preview shows every cat in the config, including "enabled": false ones
-    return [load_skin(c["skin"], skins_dir) for c in cfg["cats"] if "skin" in c]
+    # preview shows every cat (and person) in the config, also "enabled": false ones
+    return [load_skin(c["skin"], skins_dir)
+            for c in cfg["cats"] + people_entries(cfg, path) if "skin" in c]

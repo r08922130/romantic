@@ -45,5 +45,19 @@
       "jump": 1.1,
       "enabled": false
     }
+  ],
+  "people": [
+    {
+      "name": "我",
+      "skin": "boyfriend",
+      "enter_from": "left",
+      "enter_at": 14
+    },
+    {
+      "name": "女朋友",
+      "skin": "girlfriend",
+      "enter_from": "right",
+      "enter_at": 16
+    }
   ]
 }
