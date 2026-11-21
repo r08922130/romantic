@@ -5,9 +5,10 @@ pohang.py - PohangScene: sunrise at Homigot and the Guryongpo street
 
     python main.py --scene pohang
 
-Right: the Hand of Harmony (상생의 손) rises out of the sea at Homigot, the
-sun comes up and ends up "held" above its fingers, gulls sit on the
-fingertips, the Homigot lighthouse blinks on the rocks.
+Right: the Hand of Harmony (상생의 손) rises out of the sea at Homigot, gulls
+sit on its fingertips, the Homigot lighthouse blinks on the rocks.
+Middle: the sun comes up out of the sea - half of it above the horizon -
+with a golden path shimmering on the water.
 Left: Guryongpo's old Japanese-style wooden houses and the long stone stairs
 up the hill - where "When the Camellia Blooms" (동백꽃 필 무렵) was filmed,
 with the "Camellia" bar sign. Camellia bushes drop whole red blossoms, which
@@ -25,7 +26,7 @@ from engine.sprites import Art, Prop
 CX = CW // 2
 SEA_TOP, SEA_BOT = 14, 22           # horizon .. last sea row (ground is row 23)
 HAND_X, HAND_Y = 52, 9              # top-left of the hand art
-SUN_CX = HAND_X + 10                # the sun rises right behind the hand
+SUN_CX = 44                         # the sun comes up over the open sea
 STAIRS_CX = 17
 RED = (160, 196, 124, 197)          # camellia reds
 
@@ -69,7 +70,12 @@ HAND = Art(solid([
 ]), charmap={"'": S(94)}, default=S(172, 1))
 # where gulls stand: (left column, top row) of the index, middle and little finger
 FINGERTIPS = [(HAND_X + 4, HAND_Y + 1), (HAND_X + 10, HAND_Y), (HAND_X + 18, HAND_Y + 3)]
-SUN = ["   .---.", " .'     '.", "(         )"]
+# the rising sun: only the rows above the horizon are drawn ("o" = glowing disc)
+SUN = ["    _.---._",
+       "  .'ooooooo'.",
+       " /ooooooooooo\\",
+       "|ooooooooooooo|",
+       "|ooooooooooooo|"]
 
 LIGHTHOUSE = Art([" _^_",
                   " |o|",
@@ -183,10 +189,16 @@ class PohangScene(BaseScene):
 
     # ---------------- animation ----------------
     def sun_top(self):
-        """The sun's top row: rises out of the sea and ends above the hand."""
-        u = clamp((self.t - 1.0) / 22.0, 0.0, 1.0)
+        """The sun's top row: comes up out of the sea until a little more than
+        half of it is above the horizon, then stays low over the water."""
+        u = clamp((self.t - 1.0) / 20.0, 0.0, 1.0)
         u = 1 - (1 - u) ** 2
-        return SEA_TOP + 1 - u * (SEA_TOP + 1 - 3)
+        y = SEA_TOP + 1 - u * 5.0                        # .. 4 rows above the horizon
+        return y - clamp((self.t - 21.0) / 60.0, 0.0, 1.0)   # then a slow last row
+
+    def warmth(self):
+        """0 before sunrise .. 1 once the sun is up."""
+        return clamp((SEA_TOP + 1 - self.sun_top()) / 4.0, 0.0, 1.0)
 
     def update_scene(self, dt):
         t = self.t
@@ -206,8 +218,8 @@ class PohangScene(BaseScene):
     def draw_sky(self, cv):
         t = self.t
         top = self.sun_top()
-        warm = clamp((SEA_TOP + 1 - top) / 8.0, 0.0, 1.0)      # 0 before sunrise .. 1
-        if warm < 0.8:
+        warm = self.warmth()
+        if warm < 0.6:
             self.sky.draw(cv, t)
         # the glow along the horizon
         for y in range(SEA_TOP - 3, SEA_TOP):
@@ -221,16 +233,27 @@ class PohangScene(BaseScene):
             cx = (x + t * sp) % (cv.x1 - cv.x0 + 20) + cv.x0 - 10
             col = (217, 216, 223)[y % 3] if warm > 0.3 else 60
             cv.text(int(cx), y, "_.-" + "~" * (w - 6) + "-._", S(col))
-        # the sun (the sea is drawn over its lower part while it rises)
-        st = S((196, 202, 208, 214, 220)[min(4, int(warm * 4.99))], 1)
+        # the sun: only what is above the horizon shows
         y0 = int(round(top))
+        rim = S((160, 196, 202, 208, 214)[min(4, int(warm * 4.99))], 1)
+        disc = S((124, 202, 208, 214, 220)[min(4, int(warm * 4.99))], 1)
         for dy, row in enumerate(SUN):
-            if y0 + dy < SEA_TOP:
-                cv.text(SUN_CX - 5, y0 + dy, row, st)
-        if warm > 0.9:
-            for i, (dx, dy) in enumerate(((-8, 1), (8, 1), (-6, -1), (6, -1), (0, -2))):
-                if math.sin(t * 2.0 + i) > 0.2:
-                    cv.put(SUN_CX + dx, y0 + 1 + dy, "*" if i % 2 else "+", S(229, 1))
+            y = y0 + dy
+            if y >= SEA_TOP:
+                break
+            x0 = SUN_CX - len(SUN[-1]) // 2
+            for dx, ch in enumerate(row):
+                if ch == "o":
+                    shimmer = math.sin(t * 2.0 + dx * 0.7 + y * 1.3) > 0.5
+                    cv.put(x0 + dx, y, ":" if shimmer else "=", S(229, 1) if shimmer else disc)
+                elif ch != " ":
+                    cv.put(x0 + dx, y, ch, rim)
+        if warm > 0.7:                                    # rays
+            for i, (dx, dy, ch) in enumerate(((-10, 2, "-"), (10, 2, "-"), (-8, 0, "\\"),
+                                              (8, 0, "/"), (-4, -1, "\\"), (4, -1, "/"),
+                                              (0, -1, "|"))):
+                if math.sin(t * 1.7 + i * 1.3) > -0.3:
+                    cv.put(SUN_CX + dx, y0 + dy, ch, S(222, 1))
 
     def draw_village(self, cv):
         t = self.t
@@ -279,17 +302,26 @@ class PohangScene(BaseScene):
                     cv.put(x, y, "~", S(31 if y > 18 else 25))
                 elif v > 0.2:
                     cv.put(x, y, "-", S(24))
-        if top < SEA_TOP:                                     # the sun's path on the water
-            for y in range(SEA_TOP, SEA_BOT + 1):
-                spread = 1 + (y - SEA_TOP) // 3
-                for dx in range(-spread, spread + 1):
-                    if math.sin(t * 3.0 + y * 1.7 + dx * 2.3) > 0.1:
-                        cv.put(SUN_CX + dx, y, "=" if dx == 0 else "~", S(214 if abs(dx) < 2 else 208))
+        warm = self.warmth()
+        if warm > 0.0:
+            # the horizon glows on both sides of the sun
+            for x in cv.xs():
+                d = abs(x - SUN_CX)
+                if d < 26 and hash01(x, int(t * 2), 5) < warm * (1.0 - d / 26.0):
+                    cv.put(x, SEA_TOP, "~" if d > 8 else "=", S(208 if d > 8 else 214, 1))
+            # the golden path on the water, wider towards the shore
+            for y in range(SEA_TOP + 1, SEA_BOT + 1):
+                half = 4 + (y - SEA_TOP) * 0.9
+                for dx in range(-int(half), int(half) + 1):
+                    edge = abs(dx) / half
+                    v = math.sin(t * 2.6 + y * 1.9 + dx * 1.1) + math.sin(t * 1.3 - dx * 0.5)
+                    if v > 0.4 + edge * 1.2 and hash01(SUN_CX + dx, y, 6) < warm:
+                        col = 229 if edge < 0.25 else (220 if edge < 0.55 else 208)
+                        cv.put(SUN_CX + dx, y, "=" if edge < 0.4 else "-", S(col, 1 if edge < 0.55 else 0))
 
     def draw_hand(self, cv):
         t = self.t
-        top = self.sun_top()
-        lit = top < SEA_TOP - 2
+        lit = self.warmth() > 0.7
 
         def glint(dx, dy, ch, st):
             if lit and ch in "|_" and math.sin(t * 1.5 - dy * 0.6 + dx * 0.3) > 0.85:
