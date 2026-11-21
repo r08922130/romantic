@@ -24,8 +24,8 @@ from engine.sprites import Art, Prop
 
 CX = CW // 2
 SEA_TOP, SEA_BOT = 14, 22           # horizon .. last sea row (ground is row 23)
-HAND_X, HAND_Y = 57, 9              # top-left of the hand art
-SUN_CX = HAND_X + 7                 # the sun rises right behind the hand
+HAND_X, HAND_Y = 52, 9              # top-left of the hand art
+SUN_CX = HAND_X + 10                # the sun rises right behind the hand
 STAIRS_CX = 17
 RED = (160, 196, 124, 197)          # camellia reds
 
@@ -54,22 +54,21 @@ def solid(rows):
 #  The Hand of Harmony: a bronze right hand, fingers up, thumb out
 # ---------------------------------------------------------------------
 HAND = Art(solid([
-    "      __",
-    "   __|  |__",
-    "  |  |  |  |__",
-    "  |  |  |  |  |",
-    "  |  |  |  |  |",
-    "__|  |  |  |  |",
-    "\\ \\  '  '  '  |",
-    " \\ \\          |",
-    "  \\           |",
-    "   \\         /",
-    "    \\       /",
-    "     |     |",
-    "     |     |",
+    "          _",
+    "     _   | |   _",
+    "    | |  | |  | |",
+    "    | |  | |  | |  _",
+    " _  | |  | |  | | | |",
+    "\\ \\ | |  | |  | | | |",
+    " \\ \\| |__| |__| |/ /",
+    "  \\  '    '    '  /",
+    "   \\             /",
+    "    \\           /",
+    "     |         |",
+    "     |         |",
 ]), charmap={"'": S(94)}, default=S(172, 1))
-FINGERTIPS = [(HAND_X + 3, HAND_Y + 1), (HAND_X + 6, HAND_Y)]     # top rows of two fingers
-
+# where gulls stand: (left column, top row) of the index, middle and little finger
+FINGERTIPS = [(HAND_X + 4, HAND_Y + 1), (HAND_X + 10, HAND_Y), (HAND_X + 18, HAND_Y + 3)]
 SUN = ["   .---.", " .'     '.", "(         )"]
 
 LIGHTHOUSE = Art([" _^_",
@@ -147,7 +146,7 @@ class PohangScene(BaseScene):
     order = 35
 
     INTRO_END = 10.0
-    GAZE = (HAND_X + 7, 6, HAND_Y, 9)
+    GAZE = (HAND_X + 10, 8, HAND_Y, 9)
     CAT_ACCESSORY = CAMELLIA
     BANNER = {"ramp": (203, 209, 215, 222, 215, 209), "wish_colour": 223}
     SETTINGS = {
@@ -297,10 +296,10 @@ class PohangScene(BaseScene):
                 return S(220, 1)
             return st
         HAND.draw(cv, HAND_X, HAND_Y, glint)
-        for x in range(HAND_X + 3, HAND_X + 14):              # waves around the wrist
+        for x in range(HAND_X + 3, HAND_X + 18):              # waves around the wrist
             if math.sin(x * 1.3 + t * 3.0) > 0.0:
                 cv.put(x, SEA_BOT - 1, "~", S(255, 1))
-        # two gulls resting on the fingertips, looking around
+        # gulls resting on the fingertips, looking around
         for i, (fx, fy) in enumerate(FINGERTIPS):
             look = int(t * 0.7 + i * 1.3) % 3
             cv.text(fx, fy - 1, ("o>", "<o", "o>")[look], S(255, 1))
