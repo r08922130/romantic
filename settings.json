@@ -13,8 +13,6 @@
     "christmas": {
       "greeting": "Merry Christmas, My Love!",
       "wish": "Every day with you feels like Christmas.",
-      "fourier": true,
-      "fourier_terms": 100,
       "surprise_at": 70,
       "every": 75,
       "hold": 30

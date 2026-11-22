@@ -30,8 +30,6 @@ DEFAULTS = {
     "skip_intro": False,
     "fps": 30,
     "cats": "cats.json",
-    "fourier": False,          # open with Fourier epicycles drawing the scene's outline
-    "fourier_terms": 100,      # how many Fourier terms (circles): 20, 50, 100, 200 ...
 }
 
 _TYPE_NAMES = {"str": "text", "float": "number", "int": "whole number", "bool": "true or false"}

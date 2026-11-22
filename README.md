@@ -89,8 +89,6 @@ python tools\make_mac_zip.py      # 產生 dist\工程師的浪漫-mac.zip
 
 ## 劇情流程
 
-0. **傅立葉開場**（聖誕節場景，可關閉）：一串旋轉的圓（epicycles）首尾相接，最末端畫出聖誕樹輪廓，
-   畫完後軌跡停留片刻、圓圈淡出，接著進入下面的原本劇情（軌跡會在樹長出來時慢慢淡掉）
 1. 雪花開始飄落
 2. 聖誕樹由上而下慢慢亮起（葉子、彩球、燈串）
 3. 樹頂金色星星閃亮
@@ -146,36 +144,6 @@ python tools\make_mac_zip.py      # 產生 dist\工程師的浪漫-mac.zip
 - 驚喜時，貓咪依清單順序輪流坐到樹的左、右兩側；**同時最多 3 隻**（`cats.json` 裡可以放更多隻，但沒關閉的不能超過 3 隻）。
 - 要用另一份設定：`python main.py --cats 我的貓.json`
 - 自己畫新造型：請看 [`skins/README-skins.md`](skins/README-skins.md)
-
-## 傅立葉開場（Fourier Epicycles）🌀
-
-聖誕節場景一開始，會先用**複數傅立葉級數**畫出聖誕樹：
-
-1. 場景提供一條封閉的聖誕樹輪廓（`ChristmasScene.fourier_shape()`：樹頂星星 → 每一層樹枝右緣 → 樹幹 → 左緣），
-   座標就是樹之後真正出現的那些格子。
-2. 依**弧長**均勻取樣 256 點；終端機字元約高 2 倍，所以計算時把 y 乘 2（圓才會是圓的）。
-3. 每點當成複數 `z = x + iy`，做 DFT 得到係數 `c_n`；DFT 索引 `k > N/2` 對應負頻率 `k − N`。
-4. 重建 `z(t) = Σ c_n · exp(i2πnt)`，只取最低的 N 個頻率（0, ±1, ±2 …）。
-5. 每一項是一個旋轉向量（半徑 |c_n|、每週期轉 n 圈），依大小首尾相接；最末端走過的軌跡就是聖誕樹。
-
-| 項數 | 與輪廓的最大誤差 |
-|---|---|
-| 20 | 約 1 列 |
-| 50 | 約 0.4 列 |
-| 100（預設） | 約 0.1 列 |
-| 200 | 約 0.04 列 |
-| 256（全部） | 0（完全還原取樣點） |
-
-係數只在開始時算一次（純 Python 約 0.005 秒；有安裝 NumPy 會改用 FFT，不裝也可以），每一格畫面只是把向量加起來。
-
-| 設定 | 說明 |
-|---|---|
-| `"fourier": true / false` | 開啟／跳過傅立葉開場（`settings.json` 的 `christmas` 預設開啟） |
-| `"fourier_terms": 100` | 用幾項（幾個圓）：20、50、100、200 … 越多越準 |
-| `--fourier` / `--no-fourier` | 命令列開啟／跳過 |
-| `--fourier-terms 200` | 命令列指定項數 |
-
-`skip_intro` 也會一起跳過。其他場景只要實作 `fourier_shape()` 回傳一條封閉輪廓，就能用同一個開場（`engine/fourier.py`）。
 
 ## 自訂祝福語與播放設定 ✏️（`settings.json`）
 
@@ -256,7 +224,6 @@ X_mas/
 ├─ engine/               共用底層，不含任何節日邏輯
 │  ├─ render.py          Canvas 字元畫布、256 色、寬字元處理
 │  ├─ effects.py         Fx 粒子、Starfield 星空、Fireworks 煙火、Banner 打字機祝福語
-│  ├─ fourier.py         傅立葉 epicycles 開場：弧長取樣、DFT、旋轉向量、軌跡
 │  ├─ sprites.py         Art 多行 ASCII 圖、Prop 地上的道具（貓可以躲在後面）、sym 左右對稱
 │  ├─ cats.py            Skin 造型、Accessory 配件、Cat / CalmCat / PlayfulCat
 │  ├─ scene.py           BaseScene：場景生命週期（進場→自由玩→集合→祝福）

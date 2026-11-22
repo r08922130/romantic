@@ -24,9 +24,6 @@ A concrete scene only fills in the hooks it needs (all optional):
     draw_foreground(cv) anything on top of the cats
     hideouts()          objects (cx, w, h) a playful cat may hide behind
     on_key(k)           extra keys
-    fourier_shape()     a closed outline [(x, y), ...] in stage cells: with
-                        the "fourier" setting on, Fourier epicycles draw it
-                        before the scene starts (engine/fourier.py)
     on_view(view)       the window size changed: view = (x0, y0, x1, y1), the
                         visible world (see engine/render.py "Window size");
                         add scenery for the margins of a wide window here
@@ -43,7 +40,6 @@ import random
 
 from . import cats as catlib
 from .effects import Banner, Fx, HEART_RAMP, SPARK_RAMP, Z_RAMP
-from .fourier import FourierPrelude
 from .render import CH, CW, clamp
 
 
@@ -102,11 +98,6 @@ class BaseScene:
                                  max(c.enter_at for c in self.cats) + 8.0)
         self.hold_t0 = 0.0
         self.heart_clock = 0.0
-        # an optional Fourier-epicycles opening; the scene's clock waits for it
-        self.prelude = None
-        shape = self.fourier_shape() if getattr(cfg, "fourier", False) else None
-        if shape and not cfg.skip_intro:
-            self.prelude = FourierPrelude(shape, getattr(cfg, "fourier_terms", 100))
         if cfg.skip_intro:
             self.skip_intro()
 
@@ -136,9 +127,6 @@ class BaseScene:
 
     def on_view(self, view):
         pass
-
-    def fourier_shape(self):
-        return None
 
     def margin_columns(self):
         """Visible columns outside the stage (a wide window), left and right."""
@@ -191,12 +179,6 @@ class BaseScene:
         return (self.cfg.greeting + " " + self.heart).strip()
 
     def update(self, dt):
-        if self.prelude is not None:
-            self.prelude.update(dt)
-            if not self.prelude.done:
-                return                       # the epicycles are still drawing
-            if self.prelude.finished:
-                self.prelude = None
         self.t += dt
         t = self.t
         self.update_scene(dt)
@@ -237,8 +219,6 @@ class BaseScene:
             self.set_view(cv.view())
         cv.clear()
         self.draw_background(cv)
-        if self.prelude is not None:
-            self.prelude.draw(cv)
         objs = [(y, 0, fn) for (y, fn) in self.depth_items()]
         objs += [(c.y, 1, c.draw) for c in self.cats if c.visible]
         objs.sort(key=lambda o: (o[0], o[1]))

@@ -385,23 +385,6 @@ class ChristmasScene(BaseScene):
         make = lambda r: (5, r.randint(5, 14), r.choice((PINE_S, PINE_S, PINE_L)))
         self.pines = (lay_out(random.Random(5), -3, x0, make, leftwards=True) +
                       lay_out(random.Random(6), CW + 3, x1, make))
-    def fourier_shape(self):
-        """The tree's outline for the Fourier-epicycles opening, on the very
-        cells where the tree then appears: the star, down the right edge of
-        every tier, round the trunk, up the left edge."""
-        tree = self.tree
-        sx, sy = CX, Tree.TOP - 2                    # the star's centre
-        star = []
-        for k in range(10):                          # 5 points, starting at the bottom
-            a = math.pi / 2 + k * math.pi / 5
-            r = 1.0 if k % 2 == 0 else 2.6
-            star.append((sx + r * math.cos(a), sy + r * math.sin(a) / 2.0))
-        right = [(CX + h, y) for (y, h, _cells) in tree.rows]
-        b = tree.base
-        trunk = [(CX + 2, b), (CX + 2, b + 1), (CX - 2, b + 1), (CX - 2, b)]
-        left = [(CX - h, y) for (y, h, _cells) in reversed(tree.rows)]
-        return star + right + trunk + left
-
     def update_scene(self, dt):
         self.snow.update(dt, self.t, min(1.0, 0.12 + self.t / 5.0))
 
