@@ -72,6 +72,43 @@ python tools\make_mac_zip.py      # 產生 dist\工程師的浪漫-mac.zip
     再小就會提示放大視窗。開始選單仍需要 78 × 27。
 - `Ctrl+C` 或 `q` / `Esc` 優雅離開；按 `s` 可立刻跳到驚喜橋段；按 `n` 切換到下一個場景。
 
+## 傅立葉聖誕樹（GUI 視窗版）🌀
+
+另外一支**視窗程式**（不是終端機 ASCII）：一串旋轉的圓首尾相接，最末端畫出聖誕樹，
+畫完後圓圈淡出、樹填滿綠色、星星發光、彩燈一顆顆亮起、禮物掉下來、下雪，最後打出祝福語。
+
+```powershell
+python fourier_gui\app.py
+```
+
+或雙擊 **`run_fourier.bat`**（Mac：`run_fourier.command`）。只用 Python 內建的 tkinter，不用另外安裝。
+
+| 操作 | 說明 |
+|---|---|
+| 上方按鈕 `20` `50` `100` `200` `全部`（或鍵盤 `1`–`5`） | 傅立葉項數（幾個圓），越多越準 |
+| 速度滑桿 | 畫完一圈要幾秒（5–30 秒） |
+| 大圓在前／依頻率 | 圓的排列順序（大小排序，或 0, ±1, ±2 …） |
+| 顯示圓（`C`） | 只看軌跡、不看圓 |
+| 暫停（空白鍵）、重播（`R`）、離開（`Esc`） | |
+
+**數學**（`fourier_gui/fourier.py`）：
+
+1. 聖誕樹輪廓：五角星樹頂、四層下垂的樹枝、波浪樹裙、樹幹，左右對稱的封閉曲線。
+2. 依**弧長**均勻取樣 512 點，每點是複數 `z = x + iy`。
+3. DFT 算出係數 `c_n`（索引 `k > N/2` 對應負頻率 `k − N`）；只在啟動時算一次（純 Python 約 0.02 秒，有 NumPy 會用 FFT）。
+4. `z(t) = Σ c_n · exp(i2πnt)`：只取最低的 N 個頻率，每一項是半徑 |c_n|、每圈轉 n 次的旋轉向量，首尾相接，末端畫出輪廓。
+
+| 項數 | 最大誤差（佔樹高） |
+|---|---|
+| 20 | 約 8%（圓圓的一團） |
+| 50 | 約 3% |
+| 100（預設） | 約 1.3% |
+| 200 | 約 0.5% |
+| 512（全部） | 0（完全還原取樣點） |
+
+命令列：`python fourier_gui\app.py --terms 200 --seconds 15`。
+祝福語沿用 `settings.json` 裡聖誕節場景的 `greeting` / `wish`。測試：`python fourier_gui\test_fourier.py`。
+
 ## 場景
 
 | 場景 | 內容 |
@@ -217,6 +254,8 @@ X_mas/
 ├─ main.py               入口：python main.py [--scene 名稱]
 ├─ run.bat               Windows：雙擊執行（開啟選單）
 ├─ run.command           Mac：雙擊執行（開啟選單）
+├─ run_fourier.bat       雙擊：傅立葉聖誕樹視窗版（Mac：run_fourier.command）
+├─ fourier_gui/          傅立葉聖誕樹 GUI：fourier.py 數學、app.py 視窗、test_fourier.py
 ├─ tools/make_mac_zip.py 打包 Mac 版 zip（run.command 帶可執行權限）
 ├─ settings.json         祝福語、時間、預設場景（可分場景設定）
 ├─ cats.json             有哪些貓
