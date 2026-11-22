@@ -4,22 +4,23 @@ app.py - Fourier Epicycles Christmas Tree (GUI, tkinter)
 ========================================================
 
     python fourier_gui/app.py                 (or double-click run_fourier.bat)
-    python fourier_gui/app.py --terms 200 --seconds 15
+    python fourier_gui/app.py --terms 200 --seconds 12
 
-Rotating circles (the terms of a complex Fourier series) are put head to
-tail; the tip of the last one draws a Christmas tree. Then the circles fade,
-the tree fills in, the star shines, the lights twinkle, presents drop, snow
-falls and the greeting appears.
+EVERYTHING in the picture is drawn by Fourier epicycles: the tree, the star,
+the trunk, the garlands, every ornament (baubles, hearts, bells, candy canes)
+and every present (box, ribbons, bow). Each is a closed curve with its own
+Fourier series (fourier.scene_shapes); a chain of rotating circles, put head
+to tail, draws it. Groups are drawn one after another, the shapes of a group
+at the same time. Then the circles fade, every shape fills with its colour,
+the star shines, snow falls and the greeting appears.
 
-The coefficients come from the tree outline itself (fourier.py): the outline
-is sampled evenly by arc length, transformed with a DFT once at start, and
-every frame only adds up the rotating vectors.
+The coefficients are computed once at start (fourier.py); every frame only
+adds up the rotating vectors.
 
 Keys:  Space pause   R replay   C circles on/off   1-5 terms (20/50/100/200/all)
        Esc / Q quit
 """
 import argparse
-import cmath
 import json
 import math
 import os
@@ -32,14 +33,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import fourier as F                                 # noqa: E402
 
-SAMPLES = 512
-TERM_CHOICES = (20, 50, 100, 200, SAMPLES)
+TERM_CHOICES = (20, 50, 100, 200, 512)
 BG = "#0b1026"
 GROUND = "#d8e2f0"
 
-# timeline (seconds) - DRAW is set from the speed slider
-APPEAR, HOLD, FADE = 1.2, 1.2, 1.6
-FILL, LIGHTS, GIFTS, GREETING = 2.0, 3.0, 4.5, 6.0
+# timeline: the tree takes `seconds`; the other groups take this share of it
+APPEAR = 1.2
+GROUPS = [("tree", 1.0), ("top", 0.22), ("garlands", 0.28), ("ornaments", 0.34),
+          ("gifts", 0.40)]
+HOLD, FADE = 1.0, 1.5
+FILL, GREETING = 2.0, 4.0                            # after the circles are gone
 
 
 def hex_rgb(h):
@@ -48,8 +51,8 @@ def hex_rgb(h):
 
 
 def mix(c1, c2, a):
-    """Colour c1 -> c2 by a (0..1): tkinter has no transparency, so fades are
-    done by mixing towards the background colour."""
+    """Colour c1 -> c2 by a (0..1): tkinter has no transparency, so fades
+    mix towards the background colour."""
     a = 0.0 if a < 0 else (1.0 if a > 1 else a)
     r1, g1, b1 = hex_rgb(c1)
     r2, g2, b2 = hex_rgb(c2)
@@ -57,67 +60,96 @@ def mix(c1, c2, a):
                               int(b1 + (b2 - b1) * a))
 
 
-def point_in(poly, x, y):
-    """Is (x, y) inside the polygon [(x, y), ...]? (ray casting)"""
-    inside = False
-    j = len(poly) - 1
-    for i in range(len(poly)):
-        xi, yi = poly[i]
-        xj, yj = poly[j]
-        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / (yj - yi + 1e-12) + xi:
-            inside = not inside
-        j = i
-    return inside
-
-
 def load_greeting():
     """Use the Christmas greeting from the ASCII program's settings.json."""
     greeting, wish = "Merry Christmas, My Love!", "Every day with you feels like Christmas."
-    path = os.path.join(os.path.dirname(HERE), "settings.json")
     try:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        x = data.get("scenes", {}).get("christmas", {})
+        with open(os.path.join(os.path.dirname(HERE), "settings.json"), encoding="utf-8") as f:
+            x = json.load(f).get("scenes", {}).get("christmas", {})
         greeting, wish = x.get("greeting", greeting), x.get("wish", wish)
     except (OSError, ValueError):
         pass
     return greeting, wish
 
 
-class Model:
-    """The maths, independent of the window: samples, coefficients, the
-    reconstructed curve for the chosen number of terms."""
+# ---------------------------------------------------------------------
+#  The maths for one shape
+# ---------------------------------------------------------------------
+class Drawing:
+    """One closed shape: its samples and Fourier coefficients (computed once),
+    and the reconstruction with the chosen number of terms."""
 
-    def __init__(self, terms=100):
-        self.outline = F.tree_outline()
-        self.samples = F.resample(self.outline, SAMPLES)
-        self.coeffs = F.dft(self.samples)                  # computed ONCE
+    def __init__(self, group, name, outline, colour, samples, cap):
+        self.group, self.name, self.colour = group, name, colour
+        self.outline = outline
+        self.samples = F.resample(outline, samples)
+        self.coeffs = F.dft(self.samples)
+        self.cap = cap
+        self.start = self.dur = 0.0
         self.order = "size"
-        self.set_terms(terms)
 
     def set_terms(self, terms):
-        self.terms = max(1, min(int(terms), len(self.coeffs)))
+        n = terms if self.cap is None else min(terms, self.cap)
+        self.terms = max(1, min(n, len(self.coeffs)))
         kept = F.truncate(self.coeffs, self.terms)
-        self.drawn = F.by_size(kept) if self.order == "size" else F.by_frequency(kept)
+        self.chain_coeffs = F.by_size(kept) if self.order == "size" else F.by_frequency(kept)
         self.error = F.max_error(kept, self.samples)
-        self.curve = [F.evaluate(kept, k / 1200.0) for k in range(1201)]
+        m = 1200 if self.group == "tree" else 300
+        self.curve = [F.evaluate(kept, k / float(m)) for k in range(m + 1)]
+
+    def param(self, t):
+        return (t - self.start) / self.dur
+
+
+class Model:
+    def __init__(self, terms=100, seconds=10.0):
+        self.drawings = [Drawing(*s) for s in F.scene_shapes()]
+        self.order = "size"
+        self.set_terms(terms)
+        self.set_seconds(seconds)
+
+    def set_terms(self, terms):
+        self.terms = terms
+        for d in self.drawings:
+            d.order = self.order
+            d.set_terms(terms)
 
     def set_order(self, order):
         self.order = order
         self.set_terms(self.terms)
 
+    def set_seconds(self, seconds):
+        """Lay the groups out one after another on the timeline."""
+        t = APPEAR
+        for group, share in GROUPS:
+            dur = seconds * share
+            for d in self.drawings:
+                if d.group == group:
+                    d.start, d.dur = t, dur
+            t += dur
+        self.draw_end = t
+        self.done = t + HOLD + FADE                  # all circles gone
 
+    @property
+    def tree(self):
+        return self.drawings[0]
+
+
+# ---------------------------------------------------------------------
+#  The window
+# ---------------------------------------------------------------------
 class App:
-    def __init__(self, root, terms=100, seconds=12.0, at=None):
+    POOL = 600                                       # circle items, reused every frame
+
+    def __init__(self, root, terms=100, seconds=10.0, at=None):
         self.root = root
-        self.model = Model(terms)
+        self.model = Model(terms, seconds)
         self.greeting, self.wish = load_greeting()
-        self.draw_secs = seconds
+        self.seconds = seconds
         self.show_circles = True
         self.paused = False
         self.time = at or 0.0
         self.last = time.perf_counter()
-        self.rng = random.Random(7)
         root.title("Fourier Epicycles Christmas Tree")
         root.configure(bg=BG)
         self.build_controls()
@@ -131,8 +163,6 @@ class App:
         for i, n in enumerate(TERM_CHOICES):
             root.bind(str(i + 1), lambda e, n=n: self.choose_terms(n))
         self.scale, self.ox, self.oy = 1.0, 0.0, 0.0
-        self.items = {}
-        self.snow = []
         self.layout()
         self.tick()
 
@@ -145,15 +175,16 @@ class App:
         tk.Label(bar, text="傅立葉項數", **style).pack(side="left", padx=(10, 4), pady=6)
         self.term_buttons = {}
         for n in TERM_CHOICES:
-            b = tk.Button(bar, text="全部" if n == SAMPLES else str(n), width=4,
+            b = tk.Button(bar, text="全部" if n == TERM_CHOICES[-1] else str(n), width=4,
                           command=lambda n=n: self.choose_terms(n), **style)
             b.pack(side="left", padx=2)
             self.term_buttons[n] = b
         tk.Label(bar, text="   速度", **style).pack(side="left")
-        self.speed = tk.Scale(bar, from_=5, to=30, orient="horizontal", length=120,
-                              showvalue=False, command=self.set_speed, bg=style["bg"],
-                              troughcolor="#24305a", highlightthickness=0, bd=0)
-        self.speed.set(self.draw_secs)
+        self.speed = tk.Scale(bar, from_=4, to=30, orient="horizontal", length=120,
+                              showvalue=False, bg=style["bg"], troughcolor="#24305a",
+                              highlightthickness=0, bd=0)
+        self.speed.set(self.seconds)
+        self.speed.configure(command=self.set_speed)
         self.speed.pack(side="left")
         self.order_var = tk.StringVar(value="size")
         for text, val in (("大圓在前", "size"), ("依頻率", "freq")):
@@ -167,22 +198,22 @@ class App:
         tk.Button(bar, text="重播", width=5, command=self.replay, **style).pack(side="left", padx=2)
         self.info = tk.Label(bar, text="", **style)
         self.info.pack(side="right", padx=10)
-        self.refresh_info()
 
     def refresh_info(self):
         m = self.model
         for n, b in self.term_buttons.items():
             b.configure(fg="#ffd54a" if n == m.terms else "#c9d4ee")
-        px = m.error * self.scale if hasattr(self, "scale") else 0
-        self.info.configure(text="%d 項   最大誤差 %.2f px" % (m.terms, px))
+        self.info.configure(text="%d 項   %d 個圖形   樹的最大誤差 %.1f px"
+                            % (m.terms, len(m.drawings), m.tree.error * self.scale))
 
     def choose_terms(self, n):
         self.model.set_terms(n)
-        self.refresh_info()
         self.replay()
 
     def set_speed(self, v):
-        self.draw_secs = float(v)
+        if float(v) != self.seconds:
+            self.seconds = float(v)
+            self.model.set_seconds(self.seconds)
 
     def set_order(self):
         self.model.set_order(self.order_var.get())
@@ -200,25 +231,20 @@ class App:
 
     def replay(self):
         self.time = 0.0
-        self.cv.delete("all")
-        self.items = {}
         self.layout()
 
     # ---------------- geometry ----------------
     def layout(self):
-        """Fit the tree into the canvas and build the static scenery."""
         w = max(200, self.cv.winfo_width())
         h = max(200, self.cv.winfo_height())
-        ys = [z.imag for z in self.model.outline]
-        xs = [z.real for z in self.model.outline]
-        tree_h = max(ys) - min(ys)
-        self.scale = min(h * 0.72 / tree_h, w * 0.8 / (max(xs) - min(xs)))
+        pts = [z for d in self.model.drawings for z in d.outline]
+        xs, ys = [z.real for z in pts], [z.imag for z in pts]
+        self.scale = min(h * 0.76 / (max(ys) - min(ys)), w * 0.86 / (max(xs) - min(xs)))
         self.ox = w / 2.0
-        self.oy = h * 0.47 - (max(ys) + min(ys)) / 2.0 * self.scale
-        self.ground_y = self.oy + max(ys) * self.scale + 4
+        self.oy = h * 0.50 - (max(ys) + min(ys)) / 2.0 * self.scale
+        self.ground_y = self.oy + F.GROUND_Y * self.scale
         self.w, self.h = w, h
         self.cv.delete("all")
-        self.items = {}
         self.build_scene()
         self.refresh_info()
 
@@ -228,91 +254,54 @@ class App:
     def flat(self, pts):
         out = []
         for z in pts:
-            x, y = self.to_screen(z)
-            out += (x, y)
+            out += self.to_screen(z)
         return out
 
     def build_scene(self):
         cv, rng = self.cv, random.Random(3)
-        # stars in the sky
         self.stars = []
-        for _ in range(110):
-            x, y = rng.uniform(0, self.w), rng.uniform(0, self.ground_y - 40)
+        for _ in range(110):                                       # the night sky
+            x, y = rng.uniform(0, self.w), rng.uniform(0, self.ground_y - 60)
             r = rng.choice((0.8, 1.0, 1.4))
             self.stars.append((cv.create_oval(x - r, y - r, x + r, y + r, fill="#6f7fa8",
                                               outline=""), rng.uniform(0, 6.28)))
-        # snowy ground
         g = self.ground_y
-        cv.create_oval(-self.w * 0.2, g - 18, self.w * 1.2, g + self.h, fill="#1b2442", outline="")
-        self.items["ground"] = cv.create_oval(-self.w * 0.2, g - 18, self.w * 1.2, g + self.h,
-                                              fill=BG, outline="")
-        # the tree (hidden until it fills in), its trunk and the star
-        poly = self.flat(self.model.curve)
-        self.items["fill"] = cv.create_polygon(*poly, fill=BG, outline="", smooth=False)
-        tw, top = F.TRUNK_W * self.scale, self.oy + (F.TIERS[-1][0] + 0.03) * self.scale
-        self.items["trunk"] = cv.create_rectangle(self.ox - tw + 2, top, self.ox + tw - 2,
-                                                  g - 2, fill=BG, outline="")
-        star = [F.STAR_r if k % 2 == 0 else F.STAR_R for k in range(10)]
-        star_pts = []
-        for k, rad in enumerate(star):
-            a = math.pi / 2 + k * math.pi / 5
-            star_pts.append(complex(rad * math.cos(a), F.STAR_CY + rad * math.sin(a)))
+        self.ground = cv.create_oval(-self.w * 0.2, g - 14, self.w * 1.2, g + self.h,
+                                     fill=BG, outline="")
+        # every shape: a fill (appears at the end) under its trace
+        self.fills, self.traces = [], []
+        for d in self.model.drawings:
+            self.fills.append(cv.create_polygon(*self.flat(d.curve), fill="", outline=""))
+            width = 2.4 if d.group == "tree" else 1.8
+            self.traces.append(cv.create_line(0, 0, 0, 0, fill=d.colour, width=width,
+                                              capstyle="round", joinstyle="round",
+                                              state="hidden"))
+        for i, d in enumerate(self.model.drawings):               # the trunk stands
+            if d.name == "trunk":                                 # behind the tree
+                cv.tag_lower(self.traces[i], self.fills[0])
+                cv.tag_lower(self.fills[i], self.traces[i])
         self.rays = [cv.create_line(0, 0, 0, 0, fill=BG, width=2, capstyle="round")
-                     for _ in range(8)]                    # the star's shining rays
-        self.items["star"] = cv.create_polygon(*self.flat(star_pts), fill=BG, outline="")
-        # lights and ornaments inside the tree
-        screen_poly = [self.to_screen(z) for z in self.model.curve]
-        self.lights = []
-        tries = 0
-        while len(self.lights) < 70 and tries < 4000:
-            tries += 1
-            z = complex(rng.uniform(-0.9, 0.9), rng.uniform(F.STAR_CY + 0.25, F.TIERS[-1][0] - 0.02))
-            x, y = self.to_screen(z)
-            if not point_in(screen_poly, x, y):
-                continue
-            if any((x - lx) ** 2 + (y - ly) ** 2 < (self.scale * 0.09) ** 2
-                   for (lx, ly, _i, _c, _p, _b) in self.lights):
-                continue
-            big = rng.random() < 0.3
-            r = self.scale * (0.028 if big else 0.016)
-            col = rng.choice(("#ff4d4d", "#ffd54a", "#4dd2ff", "#ff7ad9", "#7dff7a", "#ffffff"))
-            item = cv.create_oval(x - r, y - r, x + r, y + r, fill=BG, outline="")
-            self.lights.append((x, y, item, col, rng.uniform(0, 6.28), big))
-        # presents under the tree
-        self.gifts = []
-        specs = [(-0.62, 0.30, 0.20, "#d83a3a", "#ffd54a"), (-0.30, 0.20, 0.15, "#2f7de1", "#ffffff"),
-                 (0.30, 0.26, 0.18, "#8b4fd8", "#ffd54a"), (0.62, 0.20, 0.14, "#e8a23a", "#d83a3a"),
-                 (0.02, 0.16, 0.11, "#3ab06a", "#ff4d4d")]
-        for i, (x, w, h, box, rib) in enumerate(specs):
-            items = [cv.create_rectangle(0, 0, 1, 1, fill=BG, outline=""),
-                     cv.create_rectangle(0, 0, 1, 1, fill=BG, outline=""),
-                     cv.create_rectangle(0, 0, 1, 1, fill=BG, outline="")]
-            self.gifts.append((x, w, h, box, rib, items, GIFTS + i * 0.35))
-        # the drawing: trace, circles, vectors, tip (one item each, reused)
-        self.items["trace_glow"] = cv.create_line(0, 0, 0, 0, fill=BG, width=7, capstyle="round",
-                                                  joinstyle="round")
-        self.items["trace"] = cv.create_line(0, 0, 0, 0, fill="#7dff9a", width=2.2,
-                                             capstyle="round", joinstyle="round")
-        self.circle_items = [cv.create_oval(0, 0, 0, 0, outline=BG) for _ in range(160)]
-        self.items["vectors"] = cv.create_line(0, 0, 0, 0, fill=BG, width=1.2)
-        self.items["tip"] = cv.create_oval(0, 0, 0, 0, fill="#ffd54a", outline="")
-        # snow and the greeting on top
+                     for _ in range(8)]                            # the star's rays
+        self.circles = [cv.create_oval(0, 0, 0, 0, outline=BG, state="hidden")
+                        for _ in range(self.POOL)]
+        self.vectors = [cv.create_line(0, 0, 0, 0, fill=BG, width=1.1, state="hidden")
+                        for _ in self.model.drawings]
+        self.tips = [cv.create_oval(0, 0, 0, 0, fill="#ffd54a", outline="", state="hidden")
+                     for _ in self.model.drawings]
         self.snow = []
         for _ in range(140):
             x, y = rng.uniform(0, self.w), rng.uniform(-self.h, self.h)
-            r = rng.choice((1.2, 1.8, 2.4))
-            self.snow.append([x, y, r, rng.uniform(25, 60), rng.uniform(0, 6.28),
-                              cv.create_oval(0, 0, 0, 0, fill="#ffffff", outline="", state="hidden")])
-        self.items["greet"] = cv.create_text(self.w / 2, 34, text="", fill="#ffb3c7",
-                                             font=("Georgia", 26, "bold italic"))
-        self.items["wish"] = cv.create_text(self.w / 2, 72, text="", fill="#ffd9e3",
-                                            font=("Georgia", 15, "italic"))
-        self.items["label"] = cv.create_text(12, self.h - 14, anchor="w", text="",
-                                             fill="#5c6a92", font=("Consolas", 10))
-
-    def box(self, z, r):
-        x, y = self.to_screen(z)
-        return x - r, y - r, x + r, y + r
+            self.snow.append([x, y, rng.choice((1.2, 1.8, 2.4)), rng.uniform(25, 60),
+                              rng.uniform(0, 6.28),
+                              cv.create_oval(0, 0, 0, 0, fill="#ffffff", outline="",
+                                             state="hidden")])
+        self.greet = cv.create_text(self.w / 2, 34, text="", fill="#ffb3c7",
+                                    font=("Georgia", 26, "bold italic"))
+        self.wish_item = cv.create_text(self.w / 2, 72, text="", fill="#ffd9e3",
+                                        font=("Georgia", 15, "italic"))
+        self.label = cv.create_text(12, self.h - 14, anchor="w", text="", fill="#5c6a92",
+                                    font=("Consolas", 10))
+        self.drawn_n = [-1] * len(self.model.drawings)
 
     # ---------------- animation ----------------
     def tick(self):
@@ -329,72 +318,83 @@ class App:
 
     def render(self):
         cv, m, t = self.cv, self.model, self.time
-        draw_end = APPEAR + self.draw_secs
-        done = draw_end + HOLD + FADE                         # circles gone
-        after = t - done                                      # the Christmas part
-        p = (t - APPEAR) / self.draw_secs                     # curve parameter
-        # ---- the trace (the tip has drawn this much) ----
-        n = int(len(m.curve) * min(1.0, max(0.0, p)))
-        if n >= 2:
-            pts = self.flat(m.curve[:n])
-            cv.coords(self.items["trace"], *pts)
-            cv.coords(self.items["trace_glow"], *pts)
-            glow = mix("#123d24", BG, (after - FILL) / 3.0) if after > FILL else "#123d24"
-            cv.itemconfigure(self.items["trace_glow"], fill=glow)
-            cv.itemconfigure(self.items["trace"],
-                             fill=mix("#7dff9a", "#2f8f4f", after / FILL) if after > 0 else "#7dff9a")
-        # ---- circles, vectors and the tip ----
-        alpha = min(1.0, t / APPEAR) * (1.0 - max(0.0, (t - draw_end - HOLD) / FADE))
-        alpha = max(0.0, alpha) if self.show_circles else 0.0
-        heads = F.chain(m.drawn, p)
-        prev = heads[0]
-        k = 0
-        vec = []
-        for i in range(1, len(heads)):
-            r = abs(m.drawn[i][1]) * self.scale
-            if r >= 1.2 and k < len(self.circle_items):
-                x, y = self.to_screen(prev)
-                cv.coords(self.circle_items[k], x - r, y - r, x + r, y + r)
-                fade = min(1.0, 0.35 + 6.0 / (r + 6.0))        # small circles fainter
-                cv.itemconfigure(self.circle_items[k], outline=mix(BG, "#5f7bd6", alpha * (1 - fade * 0.6)),
-                                 state="normal" if alpha > 0.02 else "hidden")
-                k += 1
+        after = t - m.done                                    # the Christmas part
+        fade_all = 1.0 - max(0.0, (t - m.draw_end - HOLD) / FADE)
+        k = 0                                                 # circle items used
+        active = []
+        for i, d in enumerate(m.drawings):
+            p = d.param(t)
+            # the trace: how much of its curve this shape's tip has drawn
+            n = int(len(d.curve) * min(1.0, max(0.0, p)))
+            if n != self.drawn_n[i]:
+                self.drawn_n[i] = n
+                if n >= 2:
+                    cv.coords(self.traces[i], *self.flat(d.curve[:n]))
+                    cv.itemconfigure(self.traces[i], state="normal")
+                else:
+                    cv.itemconfigure(self.traces[i], state="hidden")
+            # its circles: fade in before it starts (the tree has a long lead-in),
+            # out just after it is done
+            lead = APPEAR if d.group == "tree" else 0.35
+            alpha = min(1.0, (t - d.start + lead) / lead, (d.start + d.dur + 0.35 - t) / 0.35)
+            alpha = max(0.0, min(alpha, fade_all)) if self.show_circles else 0.0
             if alpha > 0.02:
-                vec += self.to_screen(prev)
-            prev = heads[i]
-        for j in range(k, len(self.circle_items)):
-            cv.itemconfigure(self.circle_items[j], state="hidden")
-        if alpha > 0.02 and len(vec) >= 4:
-            vec += self.to_screen(heads[-1])
-            cv.coords(self.items["vectors"], *vec)
-            cv.itemconfigure(self.items["vectors"], fill=mix(BG, "#c9d4ee", alpha * 0.8),
-                             state="normal")
-        else:
-            cv.itemconfigure(self.items["vectors"], state="hidden")
-        tx, ty = self.to_screen(heads[-1])
-        tip_r = 4.5 if alpha > 0.02 else 0
-        cv.coords(self.items["tip"], tx - tip_r, ty - tip_r, tx + tip_r, ty + tip_r)
-        cv.itemconfigure(self.items["label"], text=(
-            "%d terms   |c_n| circles head to tail   max error %.2f px"
-            % (m.terms, m.error * self.scale)) if alpha > 0.02 else "")
-        # ---- twinkling stars ----
-        for item, ph in self.stars:
-            v = 0.5 + 0.5 * math.sin(t * 1.5 + ph)
-            cv.itemconfigure(item, fill=mix("#2b3557", "#dfe7ff", v))
+                active.append(d.group)
+            heads = F.chain(d.chain_coeffs, p)
+            vec = []
+            if alpha > 0.02:
+                prev = heads[0]
+                for j in range(1, len(heads)):
+                    r = abs(d.chain_coeffs[j][1]) * self.scale
+                    if r >= 1.5 and k < self.POOL:
+                        x, y = self.to_screen(prev)
+                        cv.coords(self.circles[k], x - r, y - r, x + r, y + r)
+                        faint = min(1.0, 0.35 + 6.0 / (r + 6.0))
+                        cv.itemconfigure(self.circles[k], state="normal",
+                                         outline=mix(BG, "#5f7bd6", alpha * (1 - faint * 0.6)))
+                        k += 1
+                    vec += self.to_screen(prev)
+                    prev = heads[j]
+                vec += self.to_screen(heads[-1])
+            if len(vec) >= 4:
+                cv.coords(self.vectors[i], *vec)
+                cv.itemconfigure(self.vectors[i], state="normal",
+                                 fill=mix(BG, "#c9d4ee", alpha * 0.75))
+                tx, ty = self.to_screen(heads[-1])
+                cv.coords(self.tips[i], tx - 3.5, ty - 3.5, tx + 3.5, ty + 3.5)
+                cv.itemconfigure(self.tips[i], state="normal")
+            else:
+                cv.itemconfigure(self.vectors[i], state="hidden")
+                cv.itemconfigure(self.tips[i], state="hidden")
+        for j in range(k, self.POOL):
+            if cv.itemcget(self.circles[j], "state") != "hidden":
+                cv.itemconfigure(self.circles[j], state="hidden")
+        groups = sorted(set(active), key=[g for g, _s in GROUPS].index)
+        cv.itemconfigure(self.label, text=(
+            "%d terms   drawing: %s   (%d circles)" % (m.terms, ", ".join(groups), k)
+            if groups else ""))
+        for item, ph in self.stars:                           # twinkling sky
+            cv.itemconfigure(item, fill=mix("#2b3557", "#dfe7ff", 0.5 + 0.5 * math.sin(t * 1.5 + ph)))
         self.christmas(after)
 
     def christmas(self, after):
-        """After the drawing: fill, star, lights, presents, snow, greeting."""
-        cv, t = self.cv, self.time
+        """After the drawing: every shape fills in, the star shines, snow, greeting."""
+        cv, m, t = self.cv, self.model, self.time
         a = after / FILL
-        cv.itemconfigure(self.items["ground"], fill=mix(BG, GROUND, a * 0.9))
-        cv.itemconfigure(self.items["fill"], fill=mix(BG, "#145c32", a))
-        cv.itemconfigure(self.items["trunk"], fill=mix(BG, "#6b3e1f", a))
-        star_on = (after - FILL * 0.5) / 1.0
+        cv.itemconfigure(self.ground, fill=mix(BG, GROUND, a * 0.9))
         pulse = 0.5 + 0.5 * math.sin(t * 3.0)
-        cv.itemconfigure(self.items["star"], fill=mix(BG, mix("#ffd54a", "#fff3b0", pulse), star_on))
+        for i, d in enumerate(m.drawings):
+            if a <= 0:
+                cv.itemconfigure(self.fills[i], fill="")
+                continue
+            fill = "#145c32" if d.group == "tree" else d.colour
+            if d.name == "star":
+                fill = mix("#ffd54a", "#fff3b0", pulse)
+            cv.itemconfigure(self.fills[i], fill=mix(BG, fill, a))
+            if d.group == "tree":                             # outline settles down
+                cv.itemconfigure(self.traces[i], fill=mix("#2fbf5f", "#1f7a3f", a))
+        on = min(1.0, max(0.0, after / FILL - 0.5))
         sx, sy = self.to_screen(complex(0, F.STAR_CY))
-        on = min(1.0, max(0.0, star_on))
         for i, ray in enumerate(self.rays):
             ang = i * math.pi / 4 + math.pi / 8 + t * 0.3
             r0 = self.scale * 0.2
@@ -402,36 +402,11 @@ class App:
             cv.coords(ray, sx + r0 * math.cos(ang), sy + r0 * math.sin(ang),
                       sx + r1 * math.cos(ang), sy + r1 * math.sin(ang))
             cv.itemconfigure(ray, fill=mix(BG, "#ffe680", on * (0.6 + 0.4 * pulse)))
-        # lights switch on one by one from the top, then twinkle
-        lit = (after - LIGHTS) / 2.5
-        ordered = sorted(self.lights, key=lambda l: l[1])
-        for i, (x, y, item, col, ph, big) in enumerate(ordered):
-            on = lit * len(ordered) - i
-            if on <= 0:
-                cv.itemconfigure(item, fill=mix(BG, "#145c32", a))
-                continue
-            v = 0.55 + 0.45 * math.sin(t * (2.0 if big else 3.5) + ph * 3)
-            cv.itemconfigure(item, fill=mix("#145c32", col, min(1.0, on) * (v if not big else 1.0)))
-        # presents drop in
-        for (x, w, h, box, rib, items, t0) in self.gifts:
-            u = (after - t0) / 0.6
-            if u <= 0:
-                for it in items:
-                    cv.itemconfigure(it, state="hidden")
-                continue
-            drop = (1 - min(1.0, u)) ** 2 * 160
-            bx, by = self.ox + x * self.scale, self.ground_y - 2 - drop
-            bw, bh = w * self.scale / 2, h * self.scale
-            cv.coords(items[0], bx - bw, by - bh, bx + bw, by)
-            cv.coords(items[1], bx - bw * 0.12, by - bh, bx + bw * 0.12, by)
-            cv.coords(items[2], bx - bw, by - bh * 0.62, bx + bw, by - bh * 0.48)
-            for it, col in zip(items, (box, rib, rib)):
-                cv.itemconfigure(it, fill=col, state="normal")
-        # snow
         snowing = after > FILL
         for f in self.snow:
             if not snowing:
-                cv.itemconfigure(f[5], state="hidden")
+                if cv.itemcget(f[5], "state") != "hidden":
+                    cv.itemconfigure(f[5], state="hidden")
                 continue
             f[1] += f[3] * 0.016
             f[0] += math.sin(t * 0.8 + f[4]) * 0.4
@@ -439,19 +414,19 @@ class App:
                 f[1] = -5
             cv.coords(f[5], f[0] - f[2], f[1] - f[2], f[0] + f[2], f[1] + f[2])
             cv.itemconfigure(f[5], state="normal")
-        # the greeting, typed out
         g = max(0, int((after - GREETING) * 14))
         heart = " ♥" if g > len(self.greeting) else ""
-        cv.itemconfigure(self.items["greet"], text=self.greeting[:g] + heart)
+        cv.itemconfigure(self.greet, text=self.greeting[:g] + heart)
         w = max(0, int((after - GREETING - len(self.greeting) / 14.0 - 0.6) * 18))
-        cv.itemconfigure(self.items["wish"], text=self.wish[:w])
+        cv.itemconfigure(self.wish_item, text=self.wish[:w])
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Fourier Epicycles Christmas Tree (GUI)")
     ap.add_argument("--terms", type=int, default=100, help="Fourier terms: 20, 50, 100, 200, 512")
-    ap.add_argument("--seconds", type=float, default=12.0, help="seconds to draw the outline")
-    ap.add_argument("--at", type=float, default=None, help=argparse.SUPPRESS)       # start time
+    ap.add_argument("--seconds", type=float, default=10.0,
+                    help="seconds to draw the tree (the decorations take a share of it)")
+    ap.add_argument("--at", type=float, default=None, help=argparse.SUPPRESS)
     ap.add_argument("--geometry", default="980x820", help=argparse.SUPPRESS)
     ap.add_argument("--quit-after", type=float, default=None, help=argparse.SUPPRESS)
     args = ap.parse_args(argv)
