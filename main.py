@@ -65,6 +65,12 @@ def build_parser():
     ap.add_argument("--skip-intro", action="store_true", default=None, dest="skip_intro",
                     help="skip the opening sequence")
     ap.add_argument("--ascii", action="store_true", help="use <3 instead of the heart symbol")
+    ap.add_argument("--fourier", dest="fourier", action="store_true", default=None,
+                    help="open with Fourier epicycles drawing the outline (christmas)")
+    ap.add_argument("--no-fourier", dest="fourier", action="store_false", default=None,
+                    help="skip the Fourier epicycles opening")
+    ap.add_argument("--fourier-terms", dest="fourier_terms", type=int, metavar="N",
+                    help="Fourier terms (circles) for the opening, e.g. 20, 50, 100, 200")
 
     ap.add_argument("--fps", type=int)
     ap.add_argument("--cats", help="cat config file (default: cats.json)")
