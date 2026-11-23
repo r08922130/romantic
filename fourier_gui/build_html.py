@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-build_html.py - write the web version:  ../fourier.html
+build_html.py - write the web version:  ../web/fourier.html
 =======================================================
 
     python fourier_gui/build_html.py
@@ -26,7 +26,7 @@ from app import load_greeting                                # noqa: E402
 from onestroke import OneStroke, one_stroke, resample_labelled   # noqa: E402
 
 TEMPLATE = os.path.join(HERE, "web_template.html")
-OUT = os.path.join(os.path.dirname(HERE), "fourier.html")
+OUT = os.path.join(os.path.dirname(HERE), "web", "fourier.html")
 
 
 def flat(points):
@@ -49,6 +49,7 @@ def page_data():
 
 
 def build(out=OUT):
+    os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(TEMPLATE, encoding="utf-8") as f:
         html = f.read()
     data = json.dumps(page_data(), ensure_ascii=False, separators=(",", ":"))

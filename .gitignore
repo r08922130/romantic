@@ -10,3 +10,6 @@ dist/
 
 # the original request notes
 x_mas_prompt_*.txt
+
+# generated web recordings (python tools/build_ascii_html.py)
+web/ascii/

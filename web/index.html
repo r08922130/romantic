@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工程師的浪漫</title>
+<!-- The home page of the web version: pick a mode. ascii.html and
+     fourier.html (and the ascii/ folder) sit next to this file. -->
+<style>
+  :root { --bg: #0b1026; --card: #141a33; --line: #26305a; --fg: #c9d4ee; --dim: #7c88ad;
+    --pink: #ffb3c7; --gold: #ffd54a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg);
+    font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; align-items: center; padding: 48px 16px 32px; }
+  h1 { margin: 0; font-size: clamp(28px, 6vw, 44px); letter-spacing: 0.08em; color: var(--pink); font-weight: 700; }
+  h1 .heart { color: #ff6fa8; }
+  .sub { margin: 10px 0 36px; color: var(--dim); font-size: 15px; text-align: center; }
+  .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;
+    width: 100%; max-width: 860px; }
+  a.mode { display: flex; flex-direction: column; text-decoration: none; color: inherit; background: var(--card);
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    transition: transform 0.15s ease, border-color 0.15s ease; }
+  a.mode:hover, a.mode:focus-visible { transform: translateY(-3px); border-color: var(--gold); outline: none; }
+  .pic { height: 190px; display: flex; align-items: center; justify-content: center; background: #0c0c0c; }
+  .pic.fourier { background: var(--bg); }
+  pre { margin: 0; font: 12px/1.2 Consolas, Menlo, "DejaVu Sans Mono", monospace; }
+  .g { color: #5faf5f; } .y { color: #ffd75f; } .r { color: #ff5f5f; } .b { color: #5fafff; }
+  .p { color: #d787ff; } .w { color: #c6c6c6; } .o { color: #d78700; }
+  .text { padding: 16px 18px 20px; }
+  .text h2 { margin: 0 0 6px; font-size: 20px; color: #fff; }
+  .text p { margin: 0; color: var(--dim); font-size: 14px; line-height: 1.6; }
+  .go { margin-top: 12px; color: var(--gold); font-size: 14px; }
+  footer { margin-top: 36px; color: #4d5880; font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+  <h1>工程師的浪漫 <span class="heart">♥</span></h1>
+  <p class="sub">用程式碼寫給妳的聖誕節</p>
+
+  <div class="modes">
+    <a class="mode" href="ascii.html">
+      <div class="pic" aria-hidden="true"><pre><span class="y">        \|/
+       --*--
+        /|\</span>
+<span class="g">        /^\
+       /</span><span class="r">o</span><span class="g">~~\
+      /~~</span><span class="b">o</span><span class="g">~~\
+     /</span><span class="p">*</span><span class="g">~~~~</span><span class="y">o</span><span class="g">\
+    /~~</span><span class="r">o</span><span class="g">~~~</span><span class="b">*</span><span class="g">~\</span>
+<span class="w">  /#\.@</span>   <span class="o">|##|</span>   <span class="w">@./#\
+ (o . o)</span>       <span class="w">(o . o)
+ ( &gt; w &lt;)</span>       <span class="w">( &gt; w &lt;)</span></pre></div>
+      <div class="text">
+        <h2>ASCII 動畫</h2>
+        <p>終端機風格的字元動畫：聖誕節、大阪城、東京晴空塔、釜山、浦項、首爾、台北 101，
+          貓咪們陪著說出想說的話。可以挑選出場的貓咪。</p>
+        <div class="go">開始播放 →</div>
+      </div>
+    </a>
+
+    <a class="mode" href="fourier.html">
+      <div class="pic fourier" aria-hidden="true">
+        <svg width="220" height="170" viewBox="0 0 220 170">
+          <g fill="none" stroke="#5f7bd6" stroke-opacity="0.55">
+            <circle cx="70" cy="95" r="42"/>
+            <circle cx="100" cy="66" r="22"/>
+            <circle cx="116" cy="52" r="11"/>
+            <circle cx="122" cy="45" r="5"/>
+          </g>
+          <polyline points="70,95 100,66 116,52 122,45 124,41" fill="none" stroke="#c9d4ee" stroke-width="1.2"/>
+          <circle cx="124" cy="41" r="3.5" fill="#ffd54a"/>
+          <path d="M124 41 L150 75 L140 75 L162 105 L150 105 L176 138 L72 138 L98 105 L86 105 L108 75 L98 75 Z"
+                fill="none" stroke="#2fbf5f" stroke-width="2" stroke-linejoin="round" stroke-dasharray="300" stroke-dashoffset="70"/>
+          <path d="M124 22 l4 9 10 1 -8 6 3 10 -9 -5 -9 5 3 -10 -8 -6 10 -1 z" fill="#ffd54a"/>
+        </svg>
+      </div>
+      <div class="text">
+        <h2>傅立葉聖誕樹</h2>
+        <p>整棵聖誕樹、彩帶、吊飾和禮物接成一條曲線，
+          由一串旋轉的圓（傅立葉級數）一筆畫完。</p>
+        <div class="go">開始播放 →</div>
+      </div>
+    </a>
+  </div>
+
+  <footer>在電腦上用瀏覽器打開效果最好・手機請橫放</footer>
+</body>
+</html>

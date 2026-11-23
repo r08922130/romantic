@@ -94,8 +94,7 @@ class BaseScene:
         self.banner = Banner(cfg.greeting, cfg.wish, self.heart, self.CW, **self.BANNER)
         self.cats = catlib.load_cats(cfg.cats, self, accessory=self.CAT_ACCESSORY,
                                      only=getattr(cfg, "only_cats", None))
-        self.next_surprise = max(cfg.surprise_at,
-                                 max(c.enter_at for c in self.cats) + 8.0)
+        self.next_surprise = max([cfg.surprise_at] + [c.enter_at + 8.0 for c in self.cats])
         self.hold_t0 = 0.0
         self.heart_clock = 0.0
         if cfg.skip_intro:
