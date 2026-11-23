@@ -6,10 +6,10 @@ build_html.py - write the web version:  ../fourier.html
     python fourier_gui/build_html.py
 
 One self-contained HTML file (no server, no internet needed): double-click it
-to open it in a browser, or send it to someone. It has both modes, 分開畫 and
-一筆畫, like the tkinter window.
+to open it in a browser, or send it to someone. It is the 一筆畫 mode: the whole
+picture as one closed curve drawn by one chain of circles.
 
-The shapes are made here in Python (fourier.py, onestroke.py) and written into
+The one-stroke path is made here in Python (onestroke.py) and written into
 the page as sample points; the page itself (web_template.html) does the
 Fourier transform, the rotating circles and the drawing in JavaScript. Run
 this again after changing the shapes, the template or the greeting in
@@ -37,10 +37,6 @@ def flat(points):
 
 
 def page_data():
-    parts = []
-    for group, name, outline, colour, samples, cap in F.scene_shapes():
-        parts.append({"g": group, "name": name, "col": colour, "cap": cap,
-                      "pts": flat(F.resample(outline, samples))})
     path, labels, info = one_stroke()
     samples, labs = resample_labelled(path, labels, OneStroke.SAMPLES)
     names = sorted(set(labs))
@@ -48,7 +44,6 @@ def page_data():
     greeting, wish = load_greeting()
     return {"greeting": greeting, "wish": wish,
             "groundY": F.GROUND_Y, "starCY": F.STAR_CY,
-            "parts": parts,
             "one": {"pts": flat(samples), "names": names, "lab": [index[l] for l in labs],
                     "parts": info}}
 

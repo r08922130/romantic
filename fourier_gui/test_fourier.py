@@ -165,7 +165,7 @@ class OneStrokeTests(unittest.TestCase):
 
 
 class WebPageTests(unittest.TestCase):
-    def test_page_holds_both_modes(self):
+    def test_page_holds_the_one_stroke(self):
         import json
         import tempfile
         import build_html as B
@@ -174,7 +174,7 @@ class WebPageTests(unittest.TestCase):
         self.assertNotIn("/*DATA*/", html)
         start = html.index("const DATA = ") + len("const DATA = ")
         data = json.loads(html[start:html.index(";</script>", start)])
-        self.assertEqual(len(data["parts"]), len(F.scene_shapes()))
+        self.assertNotIn("parts", data)                       # only the one stroke
         one = data["one"]
         self.assertEqual(len(one["pts"]), 2 * len(one["lab"]))
         self.assertEqual(set(one["names"]), set(one["parts"]))
