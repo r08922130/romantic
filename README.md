@@ -107,6 +107,14 @@ python fourier_gui\app.py
 python fourier_gui\app.py --mode one
 ```
 
+**網頁版：** 雙擊 **`fourier.html`** 就會用瀏覽器打開。兩種模式、項數、速度、顯示圓都有，手機也能看；
+不用 Python、不用網路，可以直接把這個檔案傳給別人。形狀由 Python 產生、寫進網頁，傅立葉轉換和
+旋轉圓在瀏覽器裡用 JavaScript 算。改了形狀、`fourier_gui/web_template.html` 或 settings.json 的祝福語後，重新產生：
+
+```powershell
+python fourier_gui\build_html.py
+```
+
 | 操作 | 說明 |
 |---|---|
 | 上方按鈕 `20` `50` `100` `200` `全部`（或鍵盤 `1`–`5`） | 傅立葉項數（幾個圓），越多越準 |
@@ -282,7 +290,8 @@ X_mas/
 ├─ run.bat               Windows：雙擊執行（開啟選單）
 ├─ run.command           Mac：雙擊執行（開啟選單）
 ├─ run_fourier.bat       雙擊：傅立葉聖誕樹視窗版（Mac：run_fourier.command）
-├─ fourier_gui/          傅立葉聖誕樹 GUI：fourier.py 數學、app.py 視窗、onestroke*.py 一筆畫、test_fourier.py
+├─ fourier.html           傅立葉聖誕樹網頁版（build_html.py 產生）
+├─ fourier_gui/          傅立葉聖誕樹 GUI：fourier.py 數學、app.py 視窗、onestroke*.py 一筆畫、build_html.py 網頁版、test_fourier.py
 ├─ tools/make_mac_zip.py 打包 Mac 版 zip（run.command 帶可執行權限）
 ├─ settings.json         祝福語、時間、預設場景（可分場景設定）
 ├─ cats.json             有哪些貓

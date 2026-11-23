@@ -164,6 +164,22 @@ class OneStrokeTests(unittest.TestCase):
                 self.assertGreaterEqual(len(self.m.part_points(label)), 3, label)
 
 
+class WebPageTests(unittest.TestCase):
+    def test_page_holds_both_modes(self):
+        import json
+        import tempfile
+        import build_html as B
+        out = os.path.join(tempfile.mkdtemp(), "fourier.html")
+        html = open(B.build(out), encoding="utf-8").read()
+        self.assertNotIn("/*DATA*/", html)
+        start = html.index("const DATA = ") + len("const DATA = ")
+        data = json.loads(html[start:html.index(";</script>", start)])
+        self.assertEqual(len(data["parts"]), len(F.scene_shapes()))
+        one = data["one"]
+        self.assertEqual(len(one["pts"]), 2 * len(one["lab"]))
+        self.assertEqual(set(one["names"]), set(one["parts"]))
+
+
 class WindowTests(unittest.TestCase):
     def test_both_modes_run(self):
         import tkinter as tk
