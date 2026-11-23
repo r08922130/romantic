@@ -45,6 +45,12 @@ STRETCH = 4.5
 HOLD, FADE = 1.0, 1.5
 FILL, GREETING = 2.0, 4.0                            # after the circles are gone
 FILL_ORDER = ("trunk", "tree", "star", "garland", "orn", "box", "bow")
+GIFT_PARTS = ("box", "ribbon", "bow", "ground")
+
+
+def is_gift(label):
+    """The presents (and the ground they stand on) are in front of the tree."""
+    return label.startswith(GIFT_PARTS)
 
 
 def hex_rgb(h):
@@ -226,6 +232,13 @@ class App:
             item = cv.create_line(0, 0, 0, 0, fill=part["colour"], width=part["width"],
                                   capstyle="round", joinstyle="round", state="hidden")
             self.run_items.append([item, label, i0, i1, -1])        # last drawn end
+        # the presents stand in front of the tree: once filled, they cover the
+        # tree's lines (its hem, the strings) instead of the other way round
+        gift_fills = [self.fills[l] for l in labels if l in self.fills and is_gift(l)]
+        if gift_fills:
+            for item, label, *_rest in self.run_items:
+                if not is_gift(label):
+                    cv.tag_lower(item, gift_fills[0])
         self.rays = [cv.create_line(0, 0, 0, 0, fill=BG, width=2, capstyle="round")
                      for _ in range(8)]                            # the star's rays
         self.circles = [cv.create_oval(0, 0, 0, 0, outline=BG, state="hidden")

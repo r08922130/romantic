@@ -51,6 +51,7 @@ const APPEAR = 1.2, HOLD = 1.0, FADE = 1.5, FILL = 2.0, GREETING = 4.0;
 const STRETCH = 4.5;            // one stroke takes this many times the "tree seconds"
 const POOL = 600;               // most circles drawn per frame
 const FILL_ORDER = ["trunk", "tree", "star", "garland", "orn", "box", "bow"];
+const isGift = (label) => /^(box|ribbon|bow|ground)/.test(label);   // in front of the tree
 const CHOICES = [200, 500, 1000, 1500, 2048], DEFAULT_TERMS = 1000;
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 
@@ -277,23 +278,28 @@ function renderOne() {
   const m = model, t = S.time, after = t - m.done, a = after / FILL;
   const pulse = 0.5 + 0.5 * Math.sin(t * 3);
   ground(a * 0.85);
-  if (a > 0) {
-    ctx.globalAlpha = clamp(a);
-    for (const [label, idx] of m.fills) {
-      ctx.beginPath();
-      ctx.moveTo(X(m.curve.xs[idx[0]]), Y(m.curve.ys[idx[0]]));
-      for (let k = 1; k < idx.length; k++) ctx.lineTo(X(m.curve.xs[idx[k]]), Y(m.curve.ys[idx[k]]));
-      ctx.fillStyle = fillColour(label, m.parts[label].colour, pulse);
-      ctx.fill("evenodd");
-    }
-    ctx.globalAlpha = 1;
-  }
   const p = (t - APPEAR) / m.drawSecs, n = Math.floor((m.curve.n - 1) * clamp(p));
-  for (const [label, i0, i1] of m.runs) {       // the trace, coloured part by part
-    const end = Math.min(i1, n);
-    if (end - i0 < 1) continue;
-    path(m.curve, i0, end + 1);
-    stroke(m.parts[label].colour, m.parts[label].width);
+  // the tree first, then the presents in front of it: once filled, they
+  // cover the tree's lines (its hem, the strings)
+  for (const front of [false, true]) {
+    if (a > 0) {
+      ctx.globalAlpha = clamp(a);
+      for (const [label, idx] of m.fills) {
+        if (isGift(label) !== front) continue;
+        ctx.beginPath();
+        ctx.moveTo(X(m.curve.xs[idx[0]]), Y(m.curve.ys[idx[0]]));
+        for (let k = 1; k < idx.length; k++) ctx.lineTo(X(m.curve.xs[idx[k]]), Y(m.curve.ys[idx[k]]));
+        ctx.fillStyle = fillColour(label, m.parts[label].colour, pulse);
+        ctx.fill("evenodd");
+      }
+      ctx.globalAlpha = 1;
+    }
+    for (const [label, i0, i1] of m.runs) {     // the trace, coloured part by part
+      const end = Math.min(i1, n);
+      if (end - i0 < 1 || isGift(label) !== front) continue;
+      path(m.curve, i0, end + 1);
+      stroke(m.parts[label].colour, m.parts[label].width);
+    }
   }
   rays(after, pulse);
   let alpha = Math.min(1, t / APPEAR, 1 - (t - m.drawEnd - HOLD) / FADE);
