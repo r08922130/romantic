@@ -72,6 +72,23 @@ python tools\make_mac_zip.py      # 產生 dist\工程師的浪漫-mac.zip
     再小就會提示放大視窗。開始選單仍需要 78 × 27。
 - `Ctrl+C` 或 `q` / `Esc` 優雅離開；按 `s` 可立刻跳到驚喜橋段；按 `n` 切換到下一個場景。
 
+### 網頁版 🌐
+
+雙擊 **`ascii.html`** 就會用瀏覽器打開：不用 Python、不用網路，整個就一個檔案（約 2 MB），可以直接傳給別人，手機也能看。
+
+- 上方選場景（聖誕節、大阪城、東京晴空塔、釜山、浦項、首爾、台北 101），`暫停`、`重播`、`驚喜 ♥`（直接跳到驚喜橋段），
+  拉桿可以前後跳。鍵盤：空白鍵暫停、`R` 重播、`S` 驚喜、`N` 下一個場景。
+- 做法：用**真正的 Python 程式**（和 `main.py` 同一套）把每個場景播一遍、錄下每一格畫面
+  （120 × 34 字、每秒 15 格、從開頭到祝福語結束），只存每格跟上一格不同的字，壓縮後寫進網頁，
+  網頁再照順序畫回來，顏色用終端機的 256 色。所以畫面和終端機版一模一樣。
+- 錄下來的是 `cats.json` 開啟的貓、`settings.json` 的祝福語；網頁版不能選貓、不能互動，播完會從頭再播。
+- 手機直拿時只顯示中間的主畫面，橫放看起來更大。
+- 改了場景、貓或祝福語後，重新產生：
+
+```powershell
+python tools\build_ascii_html.py
+```
+
 ## 傅立葉聖誕樹（一筆畫）🌀
 
 另外一支**視窗程式**（不是終端機 ASCII）：聖誕樹、樹頂星星、三條金色彩帶、吊飾（圓球、愛心、鈴鐺、拐杖糖）、
@@ -268,8 +285,10 @@ X_mas/
 ├─ run.bat               Windows：雙擊執行（開啟選單）
 ├─ run.command           Mac：雙擊執行（開啟選單）
 ├─ run_fourier.bat       雙擊：傅立葉聖誕樹視窗版（Mac：run_fourier.command）
+├─ ascii.html             終端機動畫網頁版（tools/build_ascii_html.py 產生）
 ├─ fourier.html           傅立葉聖誕樹網頁版，一筆畫（build_html.py 產生）
 ├─ fourier_gui/          傅立葉聖誕樹（一筆畫）：fourier.py 數學、onestroke.py 路徑、app.py 視窗、build_html.py 網頁版、test_fourier.py
+├─ tools/build_ascii_html.py 產生 ascii.html（ascii_web_template.html 是網頁本體）
 ├─ tools/make_mac_zip.py 打包 Mac 版 zip（run.command 帶可執行權限）
 ├─ settings.json         祝福語、時間、預設場景（可分場景設定）
 ├─ cats.json             有哪些貓
