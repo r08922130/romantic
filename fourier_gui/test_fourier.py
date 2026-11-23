@@ -114,5 +114,77 @@ class SceneTests(unittest.TestCase):
         self.assertTrue(all(d.terms <= 50 for d in m.drawings))
 
 
+class OneStrokeTests(unittest.TestCase):
+    """The whole picture as ONE closed curve with ONE Fourier series."""
+
+    @classmethod
+    def setUpClass(cls):
+        import onestroke as O
+        cls.O = O
+        cls.m = O.OneStroke(1000)
+
+    def test_fft_equals_dft(self):
+        N = 128
+        z = [complex(math.sin(k * 0.37), (k % 7) - 3) for k in range(N)]
+        slow = [sum(z[j] * cmath.exp(-2j * math.pi * k * j / N) for j in range(N)) for k in range(N)]
+        self.assertLess(max(abs(a - b) for a, b in zip(F.fft(z), slow)), 1e-9)
+
+    def test_reconstruct_equals_evaluate(self):
+        kept = F.truncate(self.m.coeffs, 300)
+        curve = F.reconstruct(kept, 1024)
+        for k in (0, 17, 512, 1000):
+            self.assertAlmostEqual(abs(curve[k] - F.evaluate(kept, k / 1024.0)), 0, places=9)
+
+    def test_one_curve_has_every_part(self):
+        labels = set(self.m.labels)
+        for need in ("tree", "star", "trunk", "ground", "string"):
+            self.assertIn(need, labels)
+        self.assertEqual(sum(1 for l in labels if l.startswith("garland")), 3)
+        self.assertGreaterEqual(sum(1 for l in labels if l.startswith("orn")), 10)
+        for g in range(len(F.GIFTS)):
+            for part in ("box%d", "ribbon%d", "bow%d"):
+                self.assertIn(part % g, labels)
+
+    def test_the_path_is_continuous(self):
+        path = self.m.path
+        steps = [abs(path[i + 1] - path[i]) for i in range(len(path) - 1)]
+        self.assertLess(max(steps), 2.2)          # the longest is the ground back to the start
+        self.assertLess(sorted(steps)[-2], 0.5)   # every other step is short: no jumps
+
+    def test_one_series_draws_everything(self):
+        m = self.m
+        self.assertLess(F.max_error(m.coeffs, m.samples), 1e-9)              # all 2048 terms: exact
+        errs = [F.max_error(F.truncate(m.coeffs, n), m.samples) for n in (200, 500, 1000, 1500)]
+        self.assertEqual(errs, sorted(errs, reverse=True))
+        self.assertLess(errs[2], 0.01)          # 1000 terms: within 1% of a tree unit
+
+    def test_each_part_fills_from_its_stretch(self):
+        for label, part in self.m.parts.items():
+            if part["fill"]:
+                self.assertGreaterEqual(len(self.m.part_points(label)), 3, label)
+
+
+class WindowTests(unittest.TestCase):
+    def test_both_modes_run(self):
+        import tkinter as tk
+        import app as A
+        try:
+            root = tk.Tk()
+        except tk.TclError:
+            self.skipTest("no display")
+        try:
+            root.geometry("700x600")
+            for mode in ("parts", "one", "parts"):
+                a = A.switch_mode(root, mode, 4.0)
+                a.paused = True
+                for t in (0.5, 6.0, 30.0, 60.0):
+                    a.time = t
+                    a.render()
+                root.update()
+                self.assertEqual(a.MODE, mode)
+        finally:
+            root.destroy()
+
+
 if __name__ == "__main__":
     unittest.main()

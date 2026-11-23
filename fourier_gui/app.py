@@ -17,7 +17,12 @@ the star shines, snow falls and the greeting appears.
 The coefficients are computed once at start (fourier.py); every frame only
 adds up the rotating vectors.
 
-Keys:  Space pause   R replay   C circles on/off   1-5 terms (20/50/100/200/all)
+Two modes (buttons at the top, or --mode):
+  分開畫 (parts)  every shape its own Fourier series / chain of circles
+  一筆畫 (one)    the whole picture as ONE closed curve, ONE chain of circles
+                  (onestroke.py, onestroke_app.py)
+
+Keys:  Space pause   R replay   C circles on/off   1-5 terms
        Esc / Q quit
 """
 import argparse
@@ -94,8 +99,9 @@ class Drawing:
         kept = F.truncate(self.coeffs, self.terms)
         self.chain_coeffs = F.by_size(kept) if self.order == "size" else F.by_frequency(kept)
         self.error = F.max_error(kept, self.samples)
-        m = 1200 if self.group == "tree" else 300
-        self.curve = [F.evaluate(kept, k / float(m)) for k in range(m + 1)]
+        m = 1024 if self.group == "tree" else 256
+        self.curve = F.reconstruct(kept, m)
+        self.curve.append(self.curve[0])
 
     def param(self, t):
         return (t - self.start) / self.dur
@@ -139,11 +145,15 @@ class Model:
 #  The window
 # ---------------------------------------------------------------------
 class App:
+    """'分開畫': every shape has its own Fourier series and chain of circles."""
     POOL = 600                                       # circle items, reused every frame
+    TERM_CHOICES = TERM_CHOICES
+    DEFAULT_TERMS = 100
+    MODE = "parts"
 
     def __init__(self, root, terms=100, seconds=10.0, at=None):
         self.root = root
-        self.model = Model(terms, seconds)
+        self.model = self.make_model(terms, seconds)
         self.greeting, self.wish = load_greeting()
         self.seconds = seconds
         self.show_circles = True
@@ -160,11 +170,14 @@ class App:
                         ("c", self.toggle_circles), ("C", self.toggle_circles),
                         ("<Escape>", root.destroy), ("q", root.destroy)):
             root.bind(key, lambda e, f=fn: f())
-        for i, n in enumerate(TERM_CHOICES):
+        for i, n in enumerate(self.TERM_CHOICES):
             root.bind(str(i + 1), lambda e, n=n: self.choose_terms(n))
         self.scale, self.ox, self.oy = 1.0, 0.0, 0.0
         self.layout()
         self.tick()
+
+    def make_model(self, terms, seconds):
+        return Model(terms, seconds)
 
     # ---------------- controls ----------------
     def build_controls(self):
@@ -172,10 +185,15 @@ class App:
         bar.pack(side="top", fill="x")
         style = dict(bg="#141a33", fg="#c9d4ee", activebackground="#24305a",
                      activeforeground="white", highlightthickness=0, bd=0)
-        tk.Label(bar, text="傅立葉項數", **style).pack(side="left", padx=(10, 4), pady=6)
+        self.mode_var = tk.StringVar(value=self.MODE)
+        for text, val in (("分開畫", "parts"), ("一筆畫", "one")):
+            tk.Radiobutton(bar, text=text, value=val, variable=self.mode_var,
+                           command=lambda: switch_mode(self.root, self.mode_var.get(), self.seconds),
+                           selectcolor="#24305a", **style).pack(side="left", padx=(8, 0), pady=6)
+        tk.Label(bar, text="  項數", **style).pack(side="left", padx=(6, 4))
         self.term_buttons = {}
-        for n in TERM_CHOICES:
-            b = tk.Button(bar, text="全部" if n == TERM_CHOICES[-1] else str(n), width=4,
+        for n in self.TERM_CHOICES:
+            b = tk.Button(bar, text="全部" if n == self.TERM_CHOICES[-1] else str(n), width=4,
                           command=lambda n=n: self.choose_terms(n), **style)
             b.pack(side="left", padx=2)
             self.term_buttons[n] = b
@@ -203,8 +221,7 @@ class App:
         m = self.model
         for n, b in self.term_buttons.items():
             b.configure(fg="#ffd54a" if n == m.terms else "#c9d4ee")
-        self.info.configure(text="%d 項   %d 個圖形   樹的最大誤差 %.1f px"
-                            % (m.terms, len(m.drawings), m.tree.error * self.scale))
+        self.info.configure(text="樹的誤差 %.1f px" % (m.tree.error * self.scale))
 
     def choose_terms(self, n):
         self.model.set_terms(n)
@@ -421,9 +438,21 @@ class App:
         cv.itemconfigure(self.wish_item, text=self.wish[:w])
 
 
+def switch_mode(root, mode, seconds=10.0, terms=None, at=None):
+    """Swap the window over to '分開畫' (mode "parts") or '一筆畫' ("one")."""
+    for w in root.winfo_children():
+        w.destroy()
+    from onestroke_app import OneStrokeApp
+    cls = OneStrokeApp if mode == "one" else App
+    return cls(root, terms or cls.DEFAULT_TERMS, seconds, at)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Fourier Epicycles Christmas Tree (GUI)")
-    ap.add_argument("--terms", type=int, default=100, help="Fourier terms: 20, 50, 100, 200, 512")
+    ap.add_argument("--mode", choices=("parts", "one"), default="parts",
+                    help="parts: every shape its own circles;  one: the whole picture in one stroke")
+    ap.add_argument("--terms", type=int, default=None,
+                    help="Fourier terms (parts: 20-512, default 100; one: 200-2048, default 1000)")
     ap.add_argument("--seconds", type=float, default=10.0,
                     help="seconds to draw the tree (the decorations take a share of it)")
     ap.add_argument("--at", type=float, default=None, help=argparse.SUPPRESS)
@@ -432,7 +461,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
     root = tk.Tk()
     root.geometry(args.geometry)
-    App(root, args.terms, args.seconds, args.at)
+    switch_mode(root, args.mode, args.seconds, args.terms, args.at)
     if args.quit_after:
         root.after(int(args.quit_after * 1000), root.destroy)
     root.mainloop()

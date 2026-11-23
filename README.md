@@ -88,6 +88,25 @@ python fourier_gui\app.py
 
 或雙擊 **`run_fourier.bat`**（Mac：`run_fourier.command`）。只用 Python 內建的 tkinter，不用另外安裝。
 
+上方可以切換兩種畫法：
+
+| 模式 | 說明 |
+|---|---|
+| **分開畫**（預設） | 35 個圖形各有自己的一組係數、自己的一串旋轉圓；吊飾、禮物會好幾串圓同時畫 |
+| **一筆畫** | 整張圖接成**一條封閉曲線**、只有**一組**傅立葉係數，由**同一串旋轉圓一口氣**畫完 |
+
+**一筆畫**怎麼接（`fourier_gui/onestroke.py`）：從地面左邊出發 → 左邊的禮物（盒子、橫緞帶去了又回、
+8 字蝴蝶結、直緞帶下去又上來）→ 沿樹幹爬上樹 → 樹的左緣往上（經過彩帶時沿彩帶上緣畫到右邊、再沿下緣回來，
+下緣掛著的吊飾順著細線下去畫一圈再回來；樹枝尖端也掛著吊飾）→ 樹頂繞星星一圈 → 右緣往下 → 樹幹下來 →
+右邊的禮物 → 沿地面回到起點。來回的線重疊在一起，看起來就像掛吊飾的細線。
+畫的時候線條會換成正在畫的部分的顏色，畫完後每個部分用重建曲線上屬於自己的那一段填色。
+一筆畫取樣 2048 點，預設 1000 項（可選 200／500／1000／1500／全部），誤差約 2 像素；
+係數用標準函式庫寫的 FFT 計算（0.003 秒），曲線用反向 FFT 重建。
+
+```powershell
+python fourier_gui\app.py --mode one
+```
+
 | 操作 | 說明 |
 |---|---|
 | 上方按鈕 `20` `50` `100` `200` `全部`（或鍵盤 `1`–`5`） | 傅立葉項數（幾個圓），越多越準 |
@@ -263,7 +282,7 @@ X_mas/
 ├─ run.bat               Windows：雙擊執行（開啟選單）
 ├─ run.command           Mac：雙擊執行（開啟選單）
 ├─ run_fourier.bat       雙擊：傅立葉聖誕樹視窗版（Mac：run_fourier.command）
-├─ fourier_gui/          傅立葉聖誕樹 GUI：fourier.py 數學、app.py 視窗、test_fourier.py
+├─ fourier_gui/          傅立葉聖誕樹 GUI：fourier.py 數學、app.py 視窗、onestroke*.py 一筆畫、test_fourier.py
 ├─ tools/make_mac_zip.py 打包 Mac 版 zip（run.command 帶可執行權限）
 ├─ settings.json         祝福語、時間、預設場景（可分場景設定）
 ├─ cats.json             有哪些貓

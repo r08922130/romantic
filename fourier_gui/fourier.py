@@ -255,6 +255,9 @@ def dft(samples):
         f = np.fft.fft(np.array(samples, dtype=complex)) / N
         coeffs = [(freq_of(k, N), complex(f[k])) for k in range(N)]
     except ImportError:
+        if N & (N - 1) == 0:                          # a power of two: our own FFT
+            f = fft(samples)
+            return sorted(((freq_of(k, N), f[k] / N) for k in range(N)), key=lambda c: c[0])
         tw = [cmath.exp(-2j * math.pi * k / N) for k in range(N)]
         coeffs = []
         for k in range(N):
@@ -263,6 +266,35 @@ def dft(samples):
                 acc += z * tw[(k * j) % N]
             coeffs.append((freq_of(k, N), acc / N))
     return sorted(coeffs, key=lambda c: c[0])
+
+
+def fft(z):
+    """Radix-2 FFT (len(z) a power of two): sum_k z_k exp(-i 2 pi n k / N)
+    for every n, in O(N log N) - plain Python."""
+    a = list(z)
+    n = len(a)
+    j = 0
+    for i in range(1, n):                             # bit-reversed order
+        bit = n >> 1
+        while j & bit:
+            j ^= bit
+            bit >>= 1
+        j |= bit
+        if i < j:
+            a[i], a[j] = a[j], a[i]
+    size = 2
+    while size <= n:
+        w_step = cmath.exp(-2j * math.pi / size)
+        half = size // 2
+        ws = [w_step ** k for k in range(half)]
+        for start in range(0, n, size):
+            for k in range(half):
+                u = a[start + k]
+                v = a[start + k + half] * ws[k]
+                a[start + k] = u + v
+                a[start + k + half] = u - v
+        size *= 2
+    return a
 
 
 def truncate(coeffs, terms):
@@ -294,7 +326,19 @@ def chain(coeffs, t):
     return out
 
 
+def reconstruct(coeffs, m):
+    """z(k / m) for k = 0 .. m-1 - the curve at m evenly spaced times. With
+    m a power of two (and every |n| < m/2) this is one inverse FFT instead of
+    m times len(coeffs) rotations."""
+    if m & (m - 1) == 0 and all(abs(n) < m // 2 for n, _c in coeffs):
+        a = [0j] * m
+        for n, c in coeffs:
+            a[n % m] += c.conjugate()
+        return [v.conjugate() for v in fft(a)]       # inverse transform via conjugates
+    return [evaluate(coeffs, k / float(m)) for k in range(m)]
+
+
 def max_error(coeffs, samples):
     """Largest distance between the reconstruction and the samples."""
     N = len(samples)
-    return max(abs(evaluate(coeffs, k / float(N)) - z) for k, z in enumerate(samples))
+    return max(abs(a - z) for a, z in zip(reconstruct(coeffs, N), samples))
