@@ -4,8 +4,8 @@ fourier.py - complex Fourier series of a closed outline (epicycles)
 ===================================================================
 
     outline = tree_outline()              closed curve, complex points
-                                          (also the star, garlands, ornaments,
-                                          presents: scene_shapes())
+                                          (also the star, ornaments, bow;
+                                          onestroke.py joins them into one)
     samples = resample(outline, 512)      evenly spaced by arc length
     coeffs  = dft(samples)                [(n, c_n)], n = -N/2 .. N/2-1
     z(t)    = sum c_n exp(i 2 pi n t),    t in [0, 1)
@@ -24,7 +24,7 @@ import math
 
 # ---------------------------------------------------------------------
 #  The shapes (x right, y down; the tree is about 2 units tall).
-#  Every one is a CLOSED curve - each gets its own Fourier series.
+#  onestroke.py joins them into one closed curve with one Fourier series.
 # ---------------------------------------------------------------------
 STAR_CY, STAR_R, STAR_r = -1.10, 0.16, 0.065
 APEX_Y = -0.99
@@ -64,24 +64,6 @@ def star_outline(cx=0.0, cy=STAR_CY, R=STAR_R, r=STAR_r):
     return [complex(cx + (r if k % 2 == 0 else R) * math.cos(math.pi / 2 + k * math.pi / 5),
                     cy + (r if k % 2 == 0 else R) * math.sin(math.pi / 2 + k * math.pi / 5))
             for k in range(10)]
-
-
-def rect(x0, y0, x1, y1):
-    return [complex(x0, y0), complex(x1, y0), complex(x1, y1), complex(x0, y1)]
-
-
-def trunk_outline():
-    return rect(-TRUNK_W, TIERS[-1][0], TRUNK_W, GROUND_Y)       # top tucked under the hem
-
-
-def garland_outline(p0, p1, sag, thick=0.035):
-    """A thin golden band hanging from p0 to p1 (a closed strip)."""
-    mid = (p0 + p1) / 2 + complex(0, 2 * sag)
-    top = []
-    for s in range(25):
-        u = s / 24.0
-        top.append((1 - u) ** 2 * p0 + 2 * u * (1 - u) * mid + u * u * p1)   # quadratic Bezier
-    return top + [z + complex(0, thick) for z in reversed(top)]
 
 
 def bauble_outline(cx, cy, r):
@@ -158,26 +140,8 @@ def bow_outline(cx, cy, a, b):
 
 
 # ---------------------------------------------------------------------
-#  The whole picture: what is drawn, in which colour, when
+#  The presents under the tree
 # ---------------------------------------------------------------------
-ORNAMENTS = [  # (kind, x, y, size, colour)
-    ("heart", 0.0, -0.80, 0.075, "#ff6fa8"),
-    ("bauble", 0.13, -0.68, 0.045, "#4dc3ff"),
-    ("bell", -0.20, -0.40, 0.065, "#ffcc33"),
-    ("candy", -0.13, -0.62, 0.08, "#ff4040"),
-    ("bauble", -0.22, -0.22, 0.055, "#ff4040"),
-    ("heart", 0.20, -0.20, 0.07, "#ff6fa8"),
-    ("bell", -0.40, 0.12, 0.065, "#ffcc33"),
-    ("bauble", 0.40, 0.11, 0.05, "#b56bff"),
-    ("candy", -0.20, 0.25, 0.11, "#ff4040"),
-    ("bauble", 0.17, 0.24, 0.055, "#ffcc33"),
-    ("heart", -0.48, 0.55, 0.07, "#ff6fa8"),
-    ("bauble", 0.03, 0.30, 0.045, "#4dc3ff"),
-    ("bauble", 0.50, 0.56, 0.05, "#4dc3ff"),
-]
-GARLANDS = [(complex(-0.24, -0.60), complex(0.36, -0.42), 0.05),
-            (complex(-0.40, -0.10), complex(0.56, 0.06), 0.06),
-            (complex(-0.55, 0.36), complex(0.72, 0.50), 0.06)]
 GIFTS = [  # (centre x, width, height, box colour, ribbon colour)
     (-0.66, 0.34, 0.26, "#d83a3a", "#ffd54a"),
     (-0.30, 0.22, 0.17, "#2f7de1", "#ffffff"),
@@ -189,34 +153,6 @@ GIFTS = [  # (centre x, width, height, box colour, ribbon colour)
 def ornament_outline(kind, x, y, size):
     return {"heart": heart_outline, "bauble": bauble_outline, "bell": bell_outline,
             "candy": candy_cane_outline}[kind](x, y, size)
-
-
-def gift_outlines(x, w, h, box, ribbon):
-    """A present in four closed pieces: box, two ribbons, the bow."""
-    y1 = GROUND_Y
-    y0 = y1 - h
-    rb = 0.018
-    return [("box", rect(x - w / 2, y0, x + w / 2, y1), box),
-            ("ribbon", rect(x - rb, y0, x + rb, y1), ribbon),
-            ("ribbon", rect(x - w / 2, (y0 + y1) / 2 - rb, x + w / 2, (y0 + y1) / 2 + rb), ribbon),
-            ("bow", bow_outline(x, y0 - 0.035, w * 0.28, 0.07), ribbon)]
-
-
-def scene_shapes():
-    """Everything the epicycles draw, as (group, name, outline, colour, samples,
-    max terms). Groups are drawn one after another; the shapes of a group
-    are drawn at the same time, each by its own chain of circles."""
-    out = [("tree", "tree", tree_outline(), "#2fbf5f", 512, None),
-           ("top", "star", star_outline(), "#ffd54a", 128, 60),
-           ("top", "trunk", trunk_outline(), "#8b5a2b", 128, 40)]
-    for p0, p1, sag in GARLANDS:
-        out.append(("garlands", "garland", garland_outline(p0, p1, sag), "#ffd54a", 256, 60))
-    for kind, x, y, size, col in ORNAMENTS:
-        out.append(("ornaments", kind, ornament_outline(kind, x, y, size), col, 128, 40))
-    for spec in GIFTS:
-        for name, outline, col in gift_outlines(*spec):
-            out.append(("gifts", name, outline, col, 128, 40))
-    return out
 
 
 # ---------------------------------------------------------------------

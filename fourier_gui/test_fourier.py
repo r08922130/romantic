@@ -76,44 +76,6 @@ class FourierTests(unittest.TestCase):
         self.assertAlmostEqual(abs(dict(scaled)[1]), 2 * abs(dict(COEFFS)[1]), places=9)
 
 
-class SceneTests(unittest.TestCase):
-    """Every decoration and present has its own Fourier series too."""
-
-    def test_every_shape_has_its_own_series(self):
-        shapes = F.scene_shapes()
-        groups = [s[0] for s in shapes]
-        for g in ("tree", "top", "garlands", "ornaments", "gifts"):
-            self.assertIn(g, groups)
-        self.assertEqual(groups.count("ornaments"), len(F.ORNAMENTS))
-        self.assertEqual(groups.count("gifts"), 4 * len(F.GIFTS))       # box, 2 ribbons, bow
-        for group, name, outline, colour, samples, cap in shapes:
-            with self.subTest(shape=name):
-                pts = F.resample(outline, samples)
-                coeffs = F.dft(pts)
-                self.assertLess(F.max_error(coeffs, pts), 1e-9)       # exact with every term
-                size = max(abs(z - pts[0]) for z in pts)
-                kept = F.truncate(coeffs, cap or 100)
-                self.assertLess(F.max_error(kept, pts) / size, 0.1)   # recognisable
-
-    def test_ornament_kinds(self):
-        kinds = {k for k, *_rest in F.ORNAMENTS}
-        self.assertEqual(kinds, {"bauble", "heart", "bell", "candy"})
-
-    def test_timeline_draws_groups_in_order(self):
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        import app as A
-        m = A.Model(terms=50, seconds=8.0)
-        starts = {}
-        for d in m.drawings:
-            starts.setdefault(d.group, d.start)
-            self.assertEqual(d.start, starts[d.group])               # a group starts together
-        order = [g for g, _share in A.GROUPS]
-        times = [starts[g] for g in order]
-        self.assertEqual(times, sorted(times))
-        self.assertGreater(m.done, m.draw_end)
-        self.assertTrue(all(d.terms <= 50 for d in m.drawings))
-
-
 class OneStrokeTests(unittest.TestCase):
     """The whole picture as ONE closed curve with ONE Fourier series."""
 
@@ -181,7 +143,7 @@ class WebPageTests(unittest.TestCase):
 
 
 class WindowTests(unittest.TestCase):
-    def test_both_modes_run(self):
+    def test_window_runs(self):
         import tkinter as tk
         import app as A
         try:
@@ -190,14 +152,12 @@ class WindowTests(unittest.TestCase):
             self.skipTest("no display")
         try:
             root.geometry("700x600")
-            for mode in ("parts", "one", "parts"):
-                a = A.switch_mode(root, mode, 4.0)
-                a.paused = True
-                for t in (0.5, 6.0, 30.0, 60.0):
-                    a.time = t
-                    a.render()
-                root.update()
-                self.assertEqual(a.MODE, mode)
+            a = A.App(root, 1000, 4.0)
+            a.paused = True
+            for t in (0.5, 6.0, 30.0, 60.0):
+                a.time = t
+                a.render()
+            root.update()
         finally:
             root.destroy()
 
