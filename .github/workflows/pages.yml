@@ -1,0 +1,44 @@
+# Build the web version (web/) and publish it on GitHub Pages.
+# The ASCII recordings (web/ascii/) are not in git: they are made here,
+# by the same Python program, on every push to main (about 3-5 minutes).
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the Fourier tree page
+        run: python fourier_gui/build_html.py
+      - name: Record the ASCII scenes
+        run: python tools/build_ascii_html.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
