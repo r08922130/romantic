@@ -37,6 +37,7 @@
 <body>
 <div id="bar">
   <a href="index.html" title="回首頁">←</a>
+  <span id="pics"></span><span class="sep"></span>
   <span>項數</span><span id="terms"></span>
   <span class="sep"></span><label>速度 <input id="speed" type="range" min="4" max="30" step="0.5"></label>
   <span class="sep"></span>
@@ -55,7 +56,9 @@ const STRETCH = 4.5;            // one stroke takes this many times the "tree se
 const POOL = 600;               // most circles drawn per frame
 const FILL_ORDER = ["trunk", "tree", "star", "garland", "orn", "box", "bow"];
 const isGift = (label) => /^(box|ribbon|bow|ground)/.test(label);   // in front of the tree
-const CHOICES = [200, 500, 1000, 1500, 2048], DEFAULT_TERMS = 1000;
+// the pictures: the tree (2048 samples) and the cats (4096: the faces need finer detail)
+const PICTURES = [Object.assign({ name: "tree", title: "聖誕樹", choices: [200, 500, 1000, 1500, 2048], terms: 1000 }, DATA.one)]
+  .concat(DATA.cats.map((c) => Object.assign({ cat: true, choices: [200, 500, 1000, 2000, 4096], terms: 2000 }, c)));
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 
 // ------------------------------------------------------------------
@@ -140,8 +143,9 @@ function unpack(flat) {
 //  一筆畫: the whole picture as ONE closed curve, ONE series
 // ------------------------------------------------------------------
 class OneModel {
-  constructor() {
-    const o = DATA.one, { xs, ys } = unpack(o.pts);
+  constructor(o) {
+    const { xs, ys } = unpack(o.pts);
+    this.pic = o; this.cat = !!o.cat;
     this.xs = xs; this.ys = ys;
     this.labels = o.lab.map((i) => o.names[i]);
     this.parts = o.parts;
@@ -151,7 +155,7 @@ class OneModel {
   }
   setTerms(terms) {
     this.terms = clamp(terms, 1, this.coeffs.length);
-    const kept = truncate(this.coeffs, this.terms), S = this.xs.length, m = 8192;
+    const kept = truncate(this.coeffs, this.terms), S = this.xs.length, m = 4 * S;
     this.chain = this.order === "size" ? bySize(kept) : byFrequency(kept);
     this.error = maxError(kept, this.xs, this.ys);
     this.curve = reconstruct(kept, m, true);
@@ -167,7 +171,8 @@ class OneModel {
     }
     this.fills = [];                         // each part filled from its own stretch
     const rank = (l) => FILL_ORDER.findIndex((p) => l.startsWith(p));
-    const labels = Object.keys(this.parts).filter((l) => this.parts[l].fill).sort((a, b) => rank(a) - rank(b));
+    const labels = Object.keys(this.parts).filter((l) => this.parts[l].fill);
+    if (!this.cat) labels.sort((a, b) => rank(a) - rank(b));      // a cat's parts are in painting order
     for (const l of labels) {
       const idx = [];
       for (let k = 0; k <= m; k++) if (this.curveLabels[k] === l) idx.push(k);
@@ -201,7 +206,16 @@ const S = {
   order: "size", W: 0, H: 0, scale: 1, ox: 0, oy: 0, groundY: 0,
   stars: [], snow: [],
 };
-const model = new OneModel();
+const models = {};                       // made when a picture is first chosen
+let model = null;
+function useModel(name) {
+  const pic = PICTURES.find((p) => p.name === name) || PICTURES[0];
+  if (!models[pic.name]) models[pic.name] = new OneModel(pic);
+  model = models[pic.name];
+  model.order = S.order;
+  model.setTerms(model.terms || pic.terms);
+  model.setSeconds(S.seconds);
+}
 
 function rgb(h) { return [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); }
 function mix(c1, c2, a) {
@@ -211,6 +225,12 @@ function mix(c1, c2, a) {
 }
 const X = (x) => S.ox + x * S.scale, Y = (y) => S.oy + y * S.scale;
 
+function choosePicture(name) {
+  useModel(name);
+  history.replaceState(null, "", "#" + model.pic.name);
+  buildTermButtons();
+  replay();
+}
 function chooseTerms(n) { model.setTerms(n); refreshUI(); replay(); }
 function replay() { S.time = 0; layout(); }
 
@@ -225,7 +245,7 @@ function layout() {
   S.oy = S.H * 0.52 - (b.y1 + b.y0) / 2 * S.scale;
   S.groundY = Y(DATA.groundY);
   S.stars = Array.from({ length: 110 }, () => ({
-    x: Math.random() * S.W, y: Math.random() * Math.max(10, S.groundY - 60),
+    x: Math.random() * S.W, y: Math.random() * Math.max(10, model.cat ? S.H : S.groundY - 60),
     r: [0.8, 1.0, 1.4][Math.floor(Math.random() * 3)], ph: Math.random() * 6.28 }));
   S.snow = Array.from({ length: 140 }, () => ({
     x: Math.random() * S.W, y: (Math.random() * 2 - 1) * S.H,
@@ -277,14 +297,44 @@ function fillColour(name, colour, pulse) {
   return colour;
 }
 
+// a cat: every part is filled and outlined in painting order, so the parts in
+// front cover the ones behind; the links between the parts fade away
+function renderParts(m, a, n) {
+  const fills = new Map(m.fills), runs = new Map();
+  for (const run of m.runs) {
+    if (!runs.has(run[0])) runs.set(run[0], []);
+    runs.get(run[0]).push(run);
+  }
+  for (const label of Object.keys(m.parts)) {
+    const part = m.parts[label], idx = fills.get(label);
+    if (a > 0 && idx) {
+      ctx.globalAlpha = clamp(a);
+      ctx.beginPath();
+      ctx.moveTo(X(m.curve.xs[idx[0]]), Y(m.curve.ys[idx[0]]));
+      for (let k = 1; k < idx.length; k++) ctx.lineTo(X(m.curve.xs[idx[k]]), Y(m.curve.ys[idx[k]]));
+      ctx.fillStyle = part.colour;
+      ctx.fill();
+    }
+    ctx.globalAlpha = label === "link" ? 1 - clamp(a) : 1;
+    for (const [, i0, i1] of runs.get(label) || []) {
+      const end = Math.min(i1, n);
+      if (end - i0 < 1) continue;
+      path(m.curve, i0, Math.min(end + 1, m.curve.n));
+      stroke(part.line, part.width);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
 function renderOne() {
   const m = model, t = S.time, after = t - m.done, a = after / FILL;
   const pulse = 0.5 + 0.5 * Math.sin(t * 3);
-  ground(a * 0.85);
+  if (!m.cat) ground(a * 0.85);
   const p = (t - APPEAR) / m.drawSecs, n = Math.floor((m.curve.n - 1) * clamp(p));
   // the tree first, then the presents in front of it: once filled, they
   // cover the tree's lines (its hem, the strings)
-  for (const front of [false, true]) {
+  if (m.cat) renderParts(m, a, n);
+  else for (const front of [false, true]) {
     if (a > 0) {
       ctx.globalAlpha = clamp(a);
       for (const [label, idx] of m.fills) {
@@ -304,7 +354,7 @@ function renderOne() {
       stroke(m.parts[label].colour, m.parts[label].width);
     }
   }
-  rays(after, pulse);
+  if (!m.cat) rays(after, pulse);
   let alpha = Math.min(1, t / APPEAR, 1 - (t - m.drawEnd - HOLD) / FADE);
   alpha = S.show ? clamp(alpha) : 0;
   let used = 0;
@@ -402,16 +452,27 @@ function tick(now) {
 // ------------------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 function buildTermButtons() {
-  const box = $("terms");
-  for (const n of CHOICES) {
+  const box = $("terms"), choices = model.pic.choices;
+  box.textContent = "";
+  for (const n of choices) {
     const b = document.createElement("button");
-    b.textContent = n === CHOICES[CHOICES.length - 1] ? "全部" : String(n);
+    b.textContent = n === choices[choices.length - 1] ? "全部" : String(n);
     b.dataset.n = n;
     b.onclick = () => chooseTerms(n);
     box.appendChild(b);
   }
 }
+function buildPictureButtons() {
+  for (const p of PICTURES) {
+    const b = document.createElement("button");
+    b.textContent = p.title;
+    b.dataset.pic = p.name;
+    b.onclick = () => { b.blur(); choosePicture(p.name); };
+    $("pics").appendChild(b);
+  }
+}
 function refreshUI() {
+  for (const b of document.querySelectorAll("#pics button")) b.classList.toggle("on", b.dataset.pic === model.pic.name);
   for (const b of document.querySelectorAll("#terms button")) b.classList.toggle("on", +b.dataset.n === model.terms);
   for (const b of document.querySelectorAll("#orders button")) b.classList.toggle("on", b.dataset.order === S.order);
   $("pause").textContent = S.paused ? "繼續" : "暫停";
@@ -432,13 +493,14 @@ document.addEventListener("keydown", (e) => {
   if (k === " ") { S.paused = !S.paused; refreshUI(); e.preventDefault(); }
   else if (k === "r") replay();
   else if (k === "c") { S.show = !S.show; $("circ").checked = S.show; }
-  else if (k >= "1" && k <= "5") chooseTerms(CHOICES[+k - 1]);
+  else if (k >= "1" && k <= "5") chooseTerms(model.pic.choices[+k - 1]);
 });
+useModel(location.hash.slice(1));
 new ResizeObserver(() => { const t = S.time; layout(); S.time = t; }).observe($("stage"));
 
 const at = S.time;
-model.setTerms(parseInt(params.get("terms")) || DEFAULT_TERMS);
-model.setSeconds(S.seconds);
+if (parseInt(params.get("terms"))) model.setTerms(parseInt(params.get("terms")));
+buildPictureButtons();
 buildTermButtons();
 replay();
 S.time = at;

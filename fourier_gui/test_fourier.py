@@ -126,6 +126,34 @@ class OneStrokeTests(unittest.TestCase):
                 self.assertGreaterEqual(len(self.m.part_points(label)), 3, label)
 
 
+class CatTests(unittest.TestCase):
+    def test_each_cat_is_one_continuous_curve(self):
+        import catart as C
+        for name in C.CATS:
+            path, labels, parts = C.cat_stroke(name)
+            self.assertEqual(len(path), len(labels))
+            self.assertEqual(path[0], path[-1])                       # closed
+            self.assertEqual(set(labels), set(parts))                 # every part is drawn
+            steps = [(abs(path[i] - path[i - 1]), labels[i]) for i in range(1, len(path))]
+            total = sum(s for s, _l in steps)
+            links = sum(s for s, l in steps if l == "link")
+            self.assertLess(links, 0.06 * total, name)                # hardly any joins
+            self.assertLess(max(s for s, l in steps if l == "link"), 0.1, name)
+
+    def test_one_series_draws_each_cat(self):
+        import catart as C
+        for name in C.CATS:
+            path, labels, parts = C.cat_stroke(name)
+            samples, labs = C.resample_detail(path, labels)
+            self.assertEqual(len(samples), C.SAMPLES)
+            for label, part in parts.items():
+                if part["fill"]:
+                    self.assertGreaterEqual(labs.count(label), 8, label)
+            coeffs = F.dft(samples)
+            self.assertLess(F.max_error(coeffs, samples), 1e-9)       # all terms: exact
+            self.assertLess(F.max_error(F.truncate(coeffs, 2000), samples), 0.01)
+
+
 class WebPageTests(unittest.TestCase):
     def test_page_holds_the_one_stroke(self):
         import json
@@ -140,6 +168,10 @@ class WebPageTests(unittest.TestCase):
         one = data["one"]
         self.assertEqual(len(one["pts"]), 2 * len(one["lab"]))
         self.assertEqual(set(one["names"]), set(one["parts"]))
+        self.assertEqual([c["name"] for c in data["cats"]], ["box", "lying"])
+        for cat in data["cats"]:
+            self.assertEqual(len(cat["pts"]), 2 * len(cat["lab"]))
+            self.assertEqual(set(cat["names"]), set(cat["parts"]))
 
 
 class WindowTests(unittest.TestCase):
