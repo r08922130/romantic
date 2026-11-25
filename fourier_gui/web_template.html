@@ -227,7 +227,8 @@ const X = (x) => S.ox + x * S.scale, Y = (y) => S.oy + y * S.scale;
 
 function choosePicture(name) {
   useModel(name);
-  history.replaceState(null, "", "#" + model.pic.name);
+  try { history.replaceState(null, "", "#" + model.pic.name); }
+  catch (e) { /* an embedded preview (about:srcdoc) has no address to change */ }
   buildTermButtons();
   replay();
 }
