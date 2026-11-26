@@ -148,7 +148,7 @@ python fourier_gui\app.py
 祝福語沿用 `settings.json` 裡聖誕節場景的 `greeting` / `wish`。測試：`python fourier_gui\test_fourier.py`。
 
 **網頁版：** 雙擊 **`web/fourier.html`**（或從 `web/index.html` 進去）就會用瀏覽器打開，跟視窗版一樣是一筆畫（項數、速度、顯示圓都能調），手機也能看；
-左上角可以選「聖誕樹」「紙箱貓咪」「躺躺貓咪」（兩隻貓是照著照片描線，也是一筆畫；資料在 `fourier_gui/catart.py`，照片不在專案裡）。
+左上角可以選「聖誕樹」「紙箱摸摸」「躺躺沐沐」「玩玩摸摸」「坐坐沐沐」（摸摸和沐沐就是上面 ASCII 版的兩隻貓，照著照片描線，也是一筆畫；資料在 `fourier_gui/catart.py`，照片不在專案裡）。
 不用 Python、不用網路，可以直接把這個檔案傳給別人。路徑由 Python 產生、寫進網頁，傅立葉轉換和
 旋轉圓在瀏覽器裡用 JavaScript 算。改了形狀、`fourier_gui/web_template.html` 或 settings.json 的祝福語後，重新產生：
 
@@ -303,7 +303,7 @@ X_mas/
 ├─ run.command           Mac：雙擊執行（開啟選單）
 ├─ run_fourier.bat       雙擊：傅立葉聖誕樹視窗版（Mac：run_fourier.command）
 ├─ web/                 網頁版：index.html 首頁、ascii.html + ascii/ 終端機動畫、fourier.html 傅立葉聖誕樹
-├─ fourier_gui/          傅立葉聖誕樹（一筆畫）：fourier.py 數學、onestroke.py 路徑、catart.py 兩隻貓、app.py 視窗、build_html.py 網頁版、test_fourier.py
+├─ fourier_gui/          傅立葉聖誕樹（一筆畫）：fourier.py 數學、onestroke.py 路徑、catart.py 貓咪們、app.py 視窗、build_html.py 網頁版、test_fourier.py
 ├─ tools/build_ascii_html.py 產生 web/ascii.html 和 web/ascii/（ascii_web_template.html 是網頁本體）
 ├─ tools/make_mac_zip.py 打包 Mac 版 zip（run.command 帶可執行權限）
 ├─ settings.json         祝福語、時間、預設場景（可分場景設定）

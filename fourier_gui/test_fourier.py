@@ -168,7 +168,7 @@ class WebPageTests(unittest.TestCase):
         one = data["one"]
         self.assertEqual(len(one["pts"]), 2 * len(one["lab"]))
         self.assertEqual(set(one["names"]), set(one["parts"]))
-        self.assertEqual([c["name"] for c in data["cats"]], ["box", "lying"])
+        self.assertEqual([c["name"] for c in data["cats"]], ["box", "lying", "tabby", "sitting"])
         for cat in data["cats"]:
             self.assertEqual(len(cat["pts"]), 2 * len(cat["lab"]))
             self.assertEqual(set(cat["names"]), set(cat["parts"]))
